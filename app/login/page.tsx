@@ -13,9 +13,9 @@ export default function LoginPage() {
             <p className="text-xs text-slate-500 leading-tight">Production Tracker</p>
           </div>
         </div>
-        <h2 className="text-lg font-semibold mb-1">Sign in</h2>
+        <h2 className="text-lg font-semibold mb-1">Welcome</h2>
         <p className="text-sm text-slate-500 mb-4">
-          We&apos;ll email you a magic link.
+          Sign in with your email and password. New here? Create an account.
         </p>
         <LoginForm />
       </div>
