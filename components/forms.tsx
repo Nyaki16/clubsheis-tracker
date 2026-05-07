@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
+import { JOB_TEMPLATES } from "@/lib/job-templates";
 import type { Profile, Client, Job, Task } from "@/lib/types";
 
 export function ClientForm({ onSubmit }: { onSubmit: (name: string) => Promise<void> }) {
@@ -41,21 +42,39 @@ export function JobForm({
   onSubmit,
   clients,
 }: {
-  onSubmit: (name: string, dueDate: string, clientId?: string) => Promise<void>;
+  onSubmit: (
+    name: string,
+    dueDate: string,
+    clientId?: string,
+    templateId?: string | null
+  ) => Promise<void>;
   clients?: Client[];
 }) {
+  const [templateId, setTemplateId] = useState("");
   const [name, setName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
   const [pending, startTransition] = useTransition();
 
   const needsClientPicker = !!clients;
+  const selectedTemplate = JOB_TEMPLATES.find((t) => t.id === templateId) ?? null;
+
+  function pickTemplate(id: string) {
+    setTemplateId(id);
+    const t = JOB_TEMPLATES.find((x) => x.id === id);
+    if (t && !name.trim()) setName(t.defaultJobName);
+  }
 
   function submit() {
     if (!name.trim()) return;
     if (needsClientPicker && !clientId) return;
     startTransition(async () => {
-      await onSubmit(name.trim(), dueDate, needsClientPicker ? clientId : undefined);
+      await onSubmit(
+        name.trim(),
+        dueDate,
+        needsClientPicker ? clientId : undefined,
+        templateId || null
+      );
     });
   }
 
@@ -79,6 +98,28 @@ export function JobForm({
           </select>
         </>
       )}
+
+      <label className="text-sm font-medium block mb-1.5">Template (optional)</label>
+      <select
+        value={templateId}
+        onChange={(e) => pickTemplate(e.target.value)}
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:border-slate-900"
+      >
+        <option value="">No template (blank job)</option>
+        {JOB_TEMPLATES.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.label}
+          </option>
+        ))}
+      </select>
+      {selectedTemplate ? (
+        <p className="text-xs text-slate-500 mb-3">
+          Will create {selectedTemplate.tasks.length} starter tasks · {selectedTemplate.description}
+        </p>
+      ) : (
+        <div className="mb-3" />
+      )}
+
       <label className="text-sm font-medium block mb-1.5">Job name</label>
       <input
         autoFocus={!needsClientPicker}

@@ -312,9 +312,9 @@ export default function DailyClient({
         <Modal title="New job" onClose={() => setShowNewJob(false)}>
           <JobForm
             clients={clients}
-            onSubmit={async (name, dueDate, clientId) => {
+            onSubmit={async (name, dueDate, clientId, templateId) => {
               if (!clientId) return;
-              await createJob(clientId, name, dueDate || null);
+              await createJob(clientId, name, dueDate || null, templateId);
               setShowNewJob(false);
             }}
           />

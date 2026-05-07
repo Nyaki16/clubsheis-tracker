@@ -20,8 +20,8 @@ export default function NewJobButton({ clientId }: { clientId: string }) {
       {open && (
         <Modal title="New job" onClose={() => setOpen(false)}>
           <JobForm
-            onSubmit={async (name, dueDate) => {
-              await createJob(clientId, name, dueDate || null);
+            onSubmit={async (name, dueDate, _c, templateId) => {
+              await createJob(clientId, name, dueDate || null, templateId);
               setOpen(false);
             }}
           />
