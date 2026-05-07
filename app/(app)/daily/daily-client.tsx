@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { Calendar, FileText, Filter, Plus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ArrowDown, ArrowUp, Calendar, ChevronDown, ChevronRight, Filter, Plus, Search, X } from "lucide-react";
 import Modal from "@/components/modal";
-import { TaskForm, JobForm } from "@/components/forms";
+import { JobForm } from "@/components/forms";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { isOverdue, isThisWeek, isToday, formatDate } from "@/lib/utils";
@@ -14,6 +14,9 @@ import {
   updateTaskStatus,
 } from "@/app/actions/tasks";
 import { createJob } from "@/app/actions/jobs";
+
+type SortKey = "client" | "task" | "due" | "status";
+type SortDir = "asc" | "desc";
 
 export default function DailyClient({
   tasks,
@@ -26,23 +29,23 @@ export default function DailyClient({
   jobs: Job[];
   profiles: Profile[];
 }) {
+  const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDue, setFilterDue] = useState("all");
   const [hideClosed, setHideClosed] = useState(true);
-  const [showNewTask, setShowNewTask] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("due");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showNewJob, setShowNewJob] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const getJob = (id: string) => jobs.find((j) => j.id === id);
   const getClient = (id: string) => clients.find((c) => c.id === id);
   const getProfile = (id: string | null) =>
     id ? profiles.find((p) => p.id === id) ?? null : null;
-  const getStatus = (id: string) =>
-    TASK_STATUSES.find((s) => s.id === id) ?? TASK_STATUSES[0];
 
   const filteredTasks = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
       if (hideClosed && t.status === "closed_out") return false;
       if (filterAssignee !== "all") {
@@ -58,10 +61,47 @@ export default function DailyClient({
       if (filterDue === "overdue" && !isOverdue(t.due_date)) return false;
       if (filterDue === "week" && !isThisWeek(t.due_date)) return false;
       if (filterDue === "no_date" && t.due_date) return false;
+      if (q) {
+        const job = getJob(t.job_id);
+        const client = job ? getClient(job.client_id) : null;
+        const hay = `${t.title} ${t.notes ?? ""} ${client?.name ?? ""} ${job?.name ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, jobs, filterAssignee, filterClient, filterStatus, filterDue, hideClosed]);
+  }, [tasks, jobs, clients, search, filterAssignee, filterClient, filterStatus, filterDue, hideClosed]);
+
+  const sortFn = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const statusOrder = new Map(TASK_STATUSES.map((s, i) => [s.id, i]));
+    return (a: Task, b: Task) => {
+      let av: string | number = "";
+      let bv: string | number = "";
+      if (sortKey === "client") {
+        const ja = getJob(a.job_id);
+        const jb = getJob(b.job_id);
+        av = (ja ? getClient(ja.client_id)?.name : "") ?? "";
+        bv = (jb ? getClient(jb.client_id)?.name : "") ?? "";
+      } else if (sortKey === "task") {
+        av = a.title.toLowerCase();
+        bv = b.title.toLowerCase();
+      } else if (sortKey === "status") {
+        av = statusOrder.get(a.status) ?? 99;
+        bv = statusOrder.get(b.status) ?? 99;
+      } else {
+        // due
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return (new Date(a.due_date).getTime() - new Date(b.due_date).getTime()) * dir;
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortKey, sortDir, jobs, clients]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Task[]>();
@@ -71,16 +111,17 @@ export default function DailyClient({
       const key = t.assignee_id && map.has(t.assignee_id) ? t.assignee_id : "__unassigned__";
       map.get(key)!.push(t);
     });
-    map.forEach((list) => {
-      list.sort((a, b) => {
-        if (!a.due_date && !b.due_date) return 0;
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-      });
-    });
+    map.forEach((list) => list.sort(sortFn));
     return Array.from(map.entries());
-  }, [filteredTasks, profiles]);
+  }, [filteredTasks, profiles, sortFn]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
 
   return (
     <div>
@@ -88,7 +129,7 @@ export default function DailyClient({
         <div>
           <h2 className="text-2xl font-bold mb-1">Daily Scroll</h2>
           <p className="text-slate-500 text-sm">
-            Every task, grouped by who owns it. Update status inline.
+            Every task, grouped by who owns it. Edit anything inline.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -98,16 +139,28 @@ export default function DailyClient({
           >
             <Plus className="w-4 h-4" /> New job
           </button>
-          <button
-            onClick={() => setShowNewTask(true)}
-            className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-800"
-          >
-            <Plus className="w-4 h-4" /> New task
-          </button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 sticky top-[68px] z-10">
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title, notes, client, job…"
+            className="w-full border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-slate-900"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2 mb-3">
           <Filter className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-medium text-slate-600">Filters</span>
@@ -194,9 +247,9 @@ export default function DailyClient({
 
       <div className="space-y-6">
         {groups.map(([key, list]) => {
-          if (list.length === 0) return null;
           const profile = key === "__unassigned__" ? null : getProfile(key);
           const label = profile?.name ?? "Unassigned";
+          const groupAssigneeId = key === "__unassigned__" ? null : key;
           return (
             <div
               key={key}
@@ -220,13 +273,7 @@ export default function DailyClient({
                 </span>
               </div>
               <div className="divide-y divide-slate-100">
-                <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
-                  <div className="col-span-2">Client</div>
-                  <div className="col-span-4">Task</div>
-                  <div className="col-span-2">Due</div>
-                  <div className="col-span-1">Notes</div>
-                  <div className="col-span-3">Status</div>
-                </div>
+                <SortHeader sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 {list.map((task) => (
                   <TaskRow
                     key={task.id}
@@ -237,14 +284,24 @@ export default function DailyClient({
                         ? getClient(getJob(task.job_id)!.client_id) ?? null
                         : null
                     }
-                    onEdit={() => setEditingTask(task)}
+                    profiles={profiles}
                   />
                 ))}
+                {list.length === 0 && (
+                  <div className="px-5 py-3 text-xs text-slate-400 italic">
+                    No tasks yet — add one below.
+                  </div>
+                )}
+                <NewTaskRow
+                  groupAssigneeId={groupAssigneeId}
+                  clients={clients}
+                  jobs={jobs}
+                />
               </div>
             </div>
           );
         })}
-        {filteredTasks.length === 0 && (
+        {filteredTasks.length === 0 && groups.every(([, l]) => l.length === 0) && (
           <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
             <p className="text-slate-500 text-sm">No tasks match these filters.</p>
           </div>
@@ -263,40 +320,44 @@ export default function DailyClient({
           />
         </Modal>
       )}
-      {showNewTask && (
-        <Modal title="New task" onClose={() => setShowNewTask(false)}>
-          <TaskForm
-            profiles={profiles}
-            clients={clients}
-            jobs={jobs}
-            needsJobPicker
-            onSubmit={async (input) => {
-              if (!input.job_id) return;
-              await createTask(input.job_id, {
-                title: input.title,
-                assignee_id: input.assignee_id,
-                due_date: input.due_date,
-                notes: input.notes,
-                status: input.status,
-              });
-              setShowNewTask(false);
-            }}
-          />
-        </Modal>
-      )}
-      {editingTask && (
-        <Modal title="Edit task" onClose={() => setEditingTask(null)}>
-          <TaskForm
-            profiles={profiles}
-            initial={editingTask}
-            submitLabel="Save changes"
-            onSubmit={async (input) => {
-              await updateTask(editingTask.id, input);
-              setEditingTask(null);
-            }}
-          />
-        </Modal>
-      )}
+    </div>
+  );
+}
+
+function SortHeader({
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const arrow = (k: SortKey) =>
+    sortKey === k ? (
+      sortDir === "asc" ? (
+        <ArrowUp className="w-3 h-3" />
+      ) : (
+        <ArrowDown className="w-3 h-3" />
+      )
+    ) : null;
+
+  const cell = "flex items-center gap-1 hover:text-slate-700";
+
+  return (
+    <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
+      <button onClick={() => onSort("client")} className={`col-span-2 ${cell}`}>
+        Client {arrow("client")}
+      </button>
+      <button onClick={() => onSort("task")} className={`col-span-5 ${cell}`}>
+        Task {arrow("task")}
+      </button>
+      <button onClick={() => onSort("due")} className={`col-span-2 ${cell}`}>
+        Due {arrow("due")}
+      </button>
+      <button onClick={() => onSort("status")} className={`col-span-3 ${cell}`}>
+        Status {arrow("status")}
+      </button>
     </div>
   );
 }
@@ -305,14 +366,26 @@ function TaskRow({
   task,
   job,
   client,
-  onEdit,
+  profiles,
 }: {
   task: Task;
   job: Job | null;
   client: Client | null;
-  onEdit: () => void;
+  profiles: Profile[];
 }) {
   const [, startTransition] = useTransition();
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  const [editingDate, setEditingDate] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(task.notes ?? "");
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [reassigning, setReassigning] = useState(false);
+
+  // Keep drafts in sync if server data changes after re-render
+  useEffect(() => setTitleDraft(task.title), [task.title]);
+  useEffect(() => setNotesDraft(task.notes ?? ""), [task.notes]);
+
   const status =
     TASK_STATUSES.find((s) => s.id === task.status) ?? TASK_STATUSES[0];
   const overdue =
@@ -320,9 +393,37 @@ function TaskRow({
     task.status !== "closed_out" &&
     task.status !== "published";
 
+  function saveTitle() {
+    const next = titleDraft.trim();
+    setEditingTitle(false);
+    if (!next || next === task.title) {
+      setTitleDraft(task.title);
+      return;
+    }
+    startTransition(() => updateTask(task.id, { title: next }));
+  }
+
+  function saveNotes() {
+    setEditingNotes(false);
+    if (notesDraft === (task.notes ?? "")) return;
+    startTransition(() => updateTask(task.id, { notes: notesDraft }));
+  }
+
+  function saveDate(value: string) {
+    setEditingDate(false);
+    if (value === (task.due_date ?? "")) return;
+    startTransition(() => updateTask(task.id, { due_date: value }));
+  }
+
+  function reassign(assigneeId: string | null) {
+    setReassigning(false);
+    if (assigneeId === task.assignee_id) return;
+    startTransition(() => updateTask(task.id, { assignee_id: assigneeId }));
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 hover:bg-slate-50 group items-center">
-      <div className="md:col-span-2 flex items-center gap-2 min-w-0">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 hover:bg-slate-50 group items-start">
+      <div className="md:col-span-2 flex items-center gap-2 min-w-0 pt-1">
         {client && (
           <div
             className="w-2 h-2 rounded-full flex-shrink-0"
@@ -333,43 +434,114 @@ function TaskRow({
           {client?.name ?? "—"}
         </span>
       </div>
-      <div className="md:col-span-4">
-        <p className="text-sm font-medium leading-tight">{task.title}</p>
-        {job && <p className="text-xs text-slate-500 mt-0.5">{job.name}</p>}
+
+      <div className="md:col-span-5 min-w-0">
+        {editingTitle ? (
+          <input
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveTitle();
+              if (e.key === "Escape") {
+                setTitleDraft(task.title);
+                setEditingTitle(false);
+              }
+            }}
+            className="w-full text-sm font-medium leading-tight border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+          />
+        ) : (
+          <button
+            onClick={() => setEditingTitle(true)}
+            className="text-left text-sm font-medium leading-tight hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full truncate"
+          >
+            {task.title}
+          </button>
+        )}
+        {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
+
+        {editingNotes ? (
+          <textarea
+            autoFocus
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={saveNotes}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setNotesDraft(task.notes ?? "");
+                setEditingNotes(false);
+              }
+            }}
+            rows={4}
+            placeholder="Notes…"
+            className="mt-1.5 w-full text-xs text-slate-700 border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:border-slate-900 resize-y"
+          />
+        ) : task.notes ? (
+          <button
+            onClick={() => {
+              if (!notesExpanded) {
+                setNotesExpanded(true);
+              } else {
+                setEditingNotes(true);
+              }
+            }}
+            className="mt-1 flex items-start gap-1 text-left text-xs text-slate-500 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full"
+            title={notesExpanded ? "Click to edit" : "Click to expand"}
+          >
+            {notesExpanded ? (
+              <ChevronDown className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+            )}
+            <span className={notesExpanded ? "whitespace-pre-wrap" : "truncate"}>
+              {task.notes}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setEditingNotes(true)}
+            className="mt-1 text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+          >
+            + add note
+          </button>
+        )}
       </div>
-      <div className="md:col-span-2">
-        {task.due_date ? (
-          <span
-            className={`text-sm flex items-center gap-1 ${
+
+      <div className="md:col-span-2 pt-1">
+        {editingDate ? (
+          <input
+            type="date"
+            autoFocus
+            defaultValue={task.due_date ?? ""}
+            onBlur={(e) => saveDate(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveDate((e.target as HTMLInputElement).value);
+              if (e.key === "Escape") setEditingDate(false);
+            }}
+            className="w-full text-sm border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+          />
+        ) : task.due_date ? (
+          <button
+            onClick={() => setEditingDate(true)}
+            className={`text-sm flex items-center gap-1 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 ${
               overdue ? "text-rose-600 font-medium" : "text-slate-600"
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             {formatDate(task.due_date)}
-          </span>
-        ) : (
-          <span className="text-xs text-slate-400">No date</span>
-        )}
-      </div>
-      <div className="md:col-span-1">
-        {task.notes ? (
-          <button
-            onClick={onEdit}
-            className="text-slate-400 hover:text-slate-900"
-            title={task.notes}
-          >
-            <FileText className="w-4 h-4" />
           </button>
         ) : (
           <button
-            onClick={onEdit}
-            className="text-xs text-slate-400 hover:text-slate-700"
+            onClick={() => setEditingDate(true)}
+            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
           >
-            + add
+            + set date
           </button>
         )}
       </div>
-      <div className="md:col-span-3 flex items-center gap-2">
+
+      <div className="md:col-span-3 flex items-center gap-2 pt-0.5 relative">
         <select
           value={task.status}
           onChange={(e) =>
@@ -386,11 +558,20 @@ function TaskRow({
           ))}
         </select>
         <button
-          onClick={onEdit}
-          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 text-xs"
+          onClick={() => setReassigning((v) => !v)}
+          className="opacity-0 group-hover:opacity-100 text-xs text-slate-500 hover:text-slate-900 px-1.5 py-1 border border-slate-200 rounded"
+          title="Reassign"
         >
-          Edit
+          Reassign
         </button>
+        {reassigning && (
+          <ReassignPopover
+            currentId={task.assignee_id}
+            profiles={profiles}
+            onPick={reassign}
+            onClose={() => setReassigning(false)}
+          />
+        )}
         <button
           onClick={() => {
             if (confirm("Delete this task?"))
@@ -399,6 +580,165 @@ function TaskRow({
           className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600"
         >
           <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReassignPopover({
+  currentId,
+  profiles,
+  onPick,
+  onClose,
+}: {
+  currentId: string | null;
+  profiles: Profile[];
+  onPick: (id: string | null) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [onClose]);
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-lg shadow-lg w-44 py-1"
+    >
+      <button
+        onClick={() => onPick(null)}
+        className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 ${
+          currentId === null ? "font-semibold text-slate-900" : "text-slate-600"
+        }`}
+      >
+        Unassigned
+      </button>
+      {profiles.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => onPick(p.id)}
+          className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 ${
+            currentId === p.id ? "font-semibold text-slate-900" : "text-slate-600"
+          }`}
+        >
+          {p.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function NewTaskRow({
+  groupAssigneeId,
+  clients,
+  jobs,
+}: {
+  groupAssigneeId: string | null;
+  clients: Client[];
+  jobs: Job[];
+}) {
+  const [title, setTitle] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [jobId, setJobId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [status, setStatus] = useState<TaskStatusId>("planning");
+  const [pending, startTransition] = useTransition();
+
+  const filteredJobs = jobs.filter((j) => j.client_id === clientId);
+  const canSubmit = title.trim() && jobId;
+
+  function submit() {
+    if (!canSubmit) return;
+    startTransition(async () => {
+      await createTask(jobId, {
+        title: title.trim(),
+        assignee_id: groupAssigneeId,
+        due_date: dueDate || null,
+        notes: "",
+        status,
+      });
+      setTitle("");
+      setClientId("");
+      setJobId("");
+      setDueDate("");
+      setStatus("planning");
+    });
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50/50 items-center">
+      <div className="md:col-span-2">
+        <select
+          value={clientId}
+          onChange={(e) => {
+            setClientId(e.target.value);
+            setJobId("");
+          }}
+          className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+        >
+          <option value="">Client…</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="md:col-span-5 flex items-center gap-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canSubmit) submit();
+          }}
+          placeholder="Add a task…"
+          className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900"
+        />
+        <select
+          value={jobId}
+          onChange={(e) => setJobId(e.target.value)}
+          disabled={!clientId}
+          className="text-xs border border-slate-200 rounded px-1.5 py-1 bg-white max-w-[160px]"
+        >
+          <option value="">{clientId ? "Job…" : "Pick client first"}</option>
+          {filteredJobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="md:col-span-2">
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+        />
+      </div>
+      <div className="md:col-span-3 flex items-center gap-2">
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as TaskStatusId)}
+          className="flex-1 text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+        >
+          {TASK_STATUSES.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={submit}
+          disabled={!canSubmit || pending}
+          className="bg-slate-900 text-white text-xs px-3 py-1 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+        >
+          <Plus className="w-3 h-3" /> {pending ? "…" : "Add"}
         </button>
       </div>
     </div>
