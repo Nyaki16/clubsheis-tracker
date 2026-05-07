@@ -17,6 +17,18 @@ import { createJob } from "@/app/actions/jobs";
 
 type SortKey = "client" | "task" | "due" | "status";
 type SortDir = "asc" | "desc";
+type GroupBy = "assignee" | "client" | "none";
+
+type Group = {
+  key: string;
+  label: string;
+  avatarText: string;
+  avatarBg: string;
+  dotColor?: string;
+  groupAssigneeId: string | null;
+  groupClientId: string | null;
+  list: Task[];
+};
 
 export default function DailyClient({
   tasks,
@@ -35,6 +47,7 @@ export default function DailyClient({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDue, setFilterDue] = useState("all");
   const [hideClosed, setHideClosed] = useState(true);
+  const [groupBy, setGroupBy] = useState<GroupBy>("assignee");
   const [sortKey, setSortKey] = useState<SortKey>("due");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showNewJob, setShowNewJob] = useState(false);
@@ -103,7 +116,47 @@ export default function DailyClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortKey, sortDir, jobs, clients]);
 
-  const groups = useMemo(() => {
+  const groups: Group[] = useMemo(() => {
+    if (groupBy === "none") {
+      const list = [...filteredTasks].sort(sortFn);
+      return [
+        {
+          key: "__all__",
+          label: "All tasks",
+          avatarText: "",
+          avatarBg: "bg-slate-400",
+          groupAssigneeId: null,
+          groupClientId: null,
+          list,
+        },
+      ];
+    }
+    if (groupBy === "client") {
+      const map = new Map<string, Task[]>();
+      clients.forEach((c) => map.set(c.id, []));
+      map.set("__no_client__", []);
+      filteredTasks.forEach((t) => {
+        const job = getJob(t.job_id);
+        const key = job && map.has(job.client_id) ? job.client_id : "__no_client__";
+        map.get(key)!.push(t);
+      });
+      map.forEach((list) => list.sort(sortFn));
+      return Array.from(map.entries()).map(([key, list]) => {
+        const c = key === "__no_client__" ? null : getClient(key) ?? null;
+        return {
+          key,
+          label: c?.name ?? "No client",
+          avatarText: (c?.name ?? "?")[0]?.toUpperCase() ?? "?",
+          avatarBg: c ? "" : "bg-slate-400",
+          groupAssigneeId: null,
+          groupClientId: c ? c.id : null,
+          list,
+          // bg dot color for client
+          ...(c ? { dotColor: c.color } : {}),
+        } as Group & { dotColor?: string };
+      });
+    }
+    // assignee (default)
     const map = new Map<string, Task[]>();
     profiles.forEach((p) => map.set(p.id, []));
     map.set("__unassigned__", []);
@@ -112,8 +165,23 @@ export default function DailyClient({
       map.get(key)!.push(t);
     });
     map.forEach((list) => list.sort(sortFn));
-    return Array.from(map.entries());
-  }, [filteredTasks, profiles, sortFn]);
+    return Array.from(map.entries()).map(([key, list]) => {
+      const p = key === "__unassigned__" ? null : getProfile(key);
+      const label = p?.name ?? "Unassigned";
+      return {
+        key,
+        label,
+        avatarText: label[0]?.toUpperCase() ?? "?",
+        avatarBg: p
+          ? "bg-gradient-to-br from-purple-500 to-pink-500"
+          : "bg-slate-400",
+        groupAssigneeId: key === "__unassigned__" ? null : key,
+        groupClientId: null,
+        list,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTasks, profiles, clients, sortFn, groupBy]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -129,7 +197,7 @@ export default function DailyClient({
         <div>
           <h2 className="text-2xl font-bold mb-1">Daily Scroll</h2>
           <p className="text-slate-500 text-sm">
-            Every task, grouped by who owns it. Edit anything inline.
+            Every task, grouped how you need it. Edit anything inline.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -238,70 +306,91 @@ export default function DailyClient({
             </label>
           </div>
         </div>
-        <div className="mt-3 text-xs text-slate-500">
-          Showing{" "}
-          <strong className="text-slate-900">{filteredTasks.length}</strong>{" "}
-          {filteredTasks.length === 1 ? "task" : "tasks"}
+        <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Group by</span>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              {(["assignee", "client", "none"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGroupBy(g)}
+                  className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${
+                    groupBy === g
+                      ? "bg-white shadow-sm text-slate-900"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {g === "none" ? "None" : g}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">
+            Showing{" "}
+            <strong className="text-slate-900">{filteredTasks.length}</strong>{" "}
+            {filteredTasks.length === 1 ? "task" : "tasks"}
+          </div>
         </div>
       </div>
 
       <div className="space-y-6">
-        {groups.map(([key, list]) => {
-          const profile = key === "__unassigned__" ? null : getProfile(key);
-          const label = profile?.name ?? "Unassigned";
-          const groupAssigneeId = key === "__unassigned__" ? null : key;
-          return (
-            <div
-              key={key}
-              className="bg-white rounded-xl border border-slate-200 overflow-hidden"
-            >
-              <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+        {groups.map((g) => (
+          <div
+            key={g.key}
+            className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+          >
+            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {g.dotColor ? (
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
-                      profile
-                        ? "bg-gradient-to-br from-purple-500 to-pink-500"
-                        : "bg-slate-400"
-                    }`}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ backgroundColor: g.dotColor }}
                   >
-                    {label[0]?.toUpperCase()}
+                    {g.avatarText}
                   </div>
-                  <h3 className="font-semibold">{label}</h3>
-                </div>
-                <span className="text-xs text-slate-500 font-medium">
-                  {list.length} {list.length === 1 ? "task" : "tasks"}
-                </span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                <SortHeader sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                {list.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    job={getJob(task.job_id) ?? null}
-                    client={
-                      getJob(task.job_id)
-                        ? getClient(getJob(task.job_id)!.client_id) ?? null
-                        : null
-                    }
-                    profiles={profiles}
-                  />
-                ))}
-                {list.length === 0 && (
-                  <div className="px-5 py-3 text-xs text-slate-400 italic">
-                    No tasks yet — add one below.
+                ) : g.avatarText ? (
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm ${g.avatarBg}`}
+                  >
+                    {g.avatarText}
                   </div>
-                )}
-                <NewTaskRow
-                  groupAssigneeId={groupAssigneeId}
-                  clients={clients}
-                  jobs={jobs}
-                />
+                ) : null}
+                <h3 className="font-semibold">{g.label}</h3>
               </div>
+              <span className="text-xs text-slate-500 font-medium">
+                {g.list.length} {g.list.length === 1 ? "task" : "tasks"}
+              </span>
             </div>
-          );
-        })}
-        {filteredTasks.length === 0 && groups.every(([, l]) => l.length === 0) && (
+            <div className="divide-y divide-slate-100">
+              <SortHeader sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              {g.list.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  job={getJob(task.job_id) ?? null}
+                  client={
+                    getJob(task.job_id)
+                      ? getClient(getJob(task.job_id)!.client_id) ?? null
+                      : null
+                  }
+                  profiles={profiles}
+                />
+              ))}
+              {g.list.length === 0 && (
+                <div className="px-5 py-3 text-xs text-slate-400 italic">
+                  No tasks yet — add one below.
+                </div>
+              )}
+              <NewTaskRow
+                groupAssigneeId={g.groupAssigneeId}
+                groupClientId={g.groupClientId}
+                clients={clients}
+                jobs={jobs}
+              />
+            </div>
+          </div>
+        ))}
+        {filteredTasks.length === 0 && groups.every((g) => g.list.length === 0) && (
           <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
             <p className="text-slate-500 text-sm">No tasks match these filters.</p>
           </div>
@@ -638,20 +727,27 @@ function ReassignPopover({
 
 function NewTaskRow({
   groupAssigneeId,
+  groupClientId,
   clients,
   jobs,
 }: {
   groupAssigneeId: string | null;
+  groupClientId: string | null;
   clients: Client[];
   jobs: Job[];
 }) {
   const [title, setTitle] = useState("");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(groupClientId ?? "");
   const [jobId, setJobId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<TaskStatusId>("planning");
   const [pending, startTransition] = useTransition();
+
+  // Keep client in sync when the group's pre-fill changes (e.g. switching grouping mode)
+  useEffect(() => {
+    if (groupClientId) setClientId(groupClientId);
+  }, [groupClientId]);
 
   const filteredJobs = jobs.filter((j) => j.client_id === clientId);
   const canSubmit = title.trim() && jobId;
@@ -667,7 +763,7 @@ function NewTaskRow({
         status,
       });
       setTitle("");
-      setClientId("");
+      setClientId(groupClientId ?? "");
       setJobId("");
       setDueDate("");
       setNotes("");
