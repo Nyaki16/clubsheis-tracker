@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Calendar, FileText, Filter, Plus, X } from "lucide-react";
 import Modal from "@/components/modal";
-import { TaskForm } from "@/components/forms";
+import { TaskForm, JobForm } from "@/components/forms";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { isOverdue, isThisWeek, isToday, formatDate } from "@/lib/utils";
@@ -13,6 +13,7 @@ import {
   updateTask,
   updateTaskStatus,
 } from "@/app/actions/tasks";
+import { createJob } from "@/app/actions/jobs";
 
 export default function DailyClient({
   tasks,
@@ -31,6 +32,7 @@ export default function DailyClient({
   const [filterDue, setFilterDue] = useState("all");
   const [hideClosed, setHideClosed] = useState(true);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [showNewJob, setShowNewJob] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const getJob = (id: string) => jobs.find((j) => j.id === id);
@@ -89,12 +91,20 @@ export default function DailyClient({
             Every task, grouped by who owns it. Update status inline.
           </p>
         </div>
-        <button
-          onClick={() => setShowNewTask(true)}
-          className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-800"
-        >
-          <Plus className="w-4 h-4" /> New task
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowNewJob(true)}
+            className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-50"
+          >
+            <Plus className="w-4 h-4" /> New job
+          </button>
+          <button
+            onClick={() => setShowNewTask(true)}
+            className="bg-slate-900 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-800"
+          >
+            <Plus className="w-4 h-4" /> New task
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 sticky top-[68px] z-10">
@@ -241,6 +251,18 @@ export default function DailyClient({
         )}
       </div>
 
+      {showNewJob && (
+        <Modal title="New job" onClose={() => setShowNewJob(false)}>
+          <JobForm
+            clients={clients}
+            onSubmit={async (name, dueDate, clientId) => {
+              if (!clientId) return;
+              await createJob(clientId, name, dueDate || null);
+              setShowNewJob(false);
+            }}
+          />
+        </Modal>
+      )}
       {showNewTask && (
         <Modal title="New task" onClose={() => setShowNewTask(false)}>
           <TaskForm

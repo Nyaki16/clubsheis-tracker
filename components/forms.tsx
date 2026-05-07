@@ -39,25 +39,49 @@ export function ClientForm({ onSubmit }: { onSubmit: (name: string) => Promise<v
 
 export function JobForm({
   onSubmit,
+  clients,
 }: {
-  onSubmit: (name: string, dueDate: string) => Promise<void>;
+  onSubmit: (name: string, dueDate: string, clientId?: string) => Promise<void>;
+  clients?: Client[];
 }) {
   const [name, setName] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [clientId, setClientId] = useState("");
   const [pending, startTransition] = useTransition();
+
+  const needsClientPicker = !!clients;
 
   function submit() {
     if (!name.trim()) return;
+    if (needsClientPicker && !clientId) return;
     startTransition(async () => {
-      await onSubmit(name.trim(), dueDate);
+      await onSubmit(name.trim(), dueDate, needsClientPicker ? clientId : undefined);
     });
   }
 
   return (
     <div>
+      {needsClientPicker && (
+        <>
+          <label className="text-sm font-medium block mb-1.5">Client</label>
+          <select
+            autoFocus
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+          >
+            <option value="">Select a client…</option>
+            {clients!.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       <label className="text-sm font-medium block mb-1.5">Job name</label>
       <input
-        autoFocus
+        autoFocus={!needsClientPicker}
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. November Studio Day"
