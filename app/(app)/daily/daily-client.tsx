@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Calendar, ChevronDown, ChevronRight, Filter, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, ChevronDown, ChevronRight, Filter, Plus, Search, UserCog, X } from "lucide-react";
 import Modal from "@/components/modal";
 import { JobForm } from "@/components/forms";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
@@ -349,13 +349,14 @@ function SortHeader({
       <button onClick={() => onSort("client")} className={`col-span-2 ${cell}`}>
         Client {arrow("client")}
       </button>
-      <button onClick={() => onSort("task")} className={`col-span-5 ${cell}`}>
+      <button onClick={() => onSort("task")} className={`col-span-3 ${cell}`}>
         Task {arrow("task")}
       </button>
+      <div className="col-span-3">Notes</div>
       <button onClick={() => onSort("due")} className={`col-span-2 ${cell}`}>
         Due {arrow("due")}
       </button>
-      <button onClick={() => onSort("status")} className={`col-span-3 ${cell}`}>
+      <button onClick={() => onSort("status")} className={`col-span-2 ${cell}`}>
         Status {arrow("status")}
       </button>
     </div>
@@ -435,7 +436,7 @@ function TaskRow({
         </span>
       </div>
 
-      <div className="md:col-span-5 min-w-0">
+      <div className="md:col-span-3 min-w-0">
         {editingTitle ? (
           <input
             autoFocus
@@ -460,7 +461,9 @@ function TaskRow({
           </button>
         )}
         {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
+      </div>
 
+      <div className="md:col-span-3 min-w-0 pt-1">
         {editingNotes ? (
           <textarea
             autoFocus
@@ -475,7 +478,7 @@ function TaskRow({
             }}
             rows={4}
             placeholder="Notes…"
-            className="mt-1.5 w-full text-xs text-slate-700 border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:border-slate-900 resize-y"
+            className="w-full text-xs text-slate-700 border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:border-slate-900 resize-y"
           />
         ) : task.notes ? (
           <button
@@ -486,7 +489,7 @@ function TaskRow({
                 setEditingNotes(true);
               }
             }}
-            className="mt-1 flex items-start gap-1 text-left text-xs text-slate-500 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full"
+            className="flex items-start gap-1 text-left text-xs text-slate-600 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full"
             title={notesExpanded ? "Click to edit" : "Click to expand"}
           >
             {notesExpanded ? (
@@ -501,7 +504,7 @@ function TaskRow({
         ) : (
           <button
             onClick={() => setEditingNotes(true)}
-            className="mt-1 text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
           >
             + add note
           </button>
@@ -541,7 +544,7 @@ function TaskRow({
         )}
       </div>
 
-      <div className="md:col-span-3 flex items-center gap-2 pt-0.5 relative">
+      <div className="md:col-span-2 flex items-center gap-1 pt-0.5 relative">
         <select
           value={task.status}
           onChange={(e) =>
@@ -549,7 +552,7 @@ function TaskRow({
               updateTaskStatus(task.id, e.target.value as TaskStatusId)
             )
           }
-          className={`text-xs font-medium border rounded-md px-2 py-1 flex-1 ${status.color}`}
+          className={`text-xs font-medium border rounded-md px-2 py-1 flex-1 min-w-0 ${status.color}`}
         >
           {TASK_STATUSES.map((s) => (
             <option key={s.id} value={s.id}>
@@ -559,10 +562,10 @@ function TaskRow({
         </select>
         <button
           onClick={() => setReassigning((v) => !v)}
-          className="opacity-0 group-hover:opacity-100 text-xs text-slate-500 hover:text-slate-900 px-1.5 py-1 border border-slate-200 rounded"
+          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 p-1"
           title="Reassign"
         >
-          Reassign
+          <UserCog className="w-4 h-4" />
         </button>
         {reassigning && (
           <ReassignPopover
@@ -577,7 +580,7 @@ function TaskRow({
             if (confirm("Delete this task?"))
               startTransition(() => deleteTask(task.id));
           }}
-          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600"
+          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1"
         >
           <X className="w-4 h-4" />
         </button>
@@ -646,6 +649,7 @@ function NewTaskRow({
   const [clientId, setClientId] = useState("");
   const [jobId, setJobId] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<TaskStatusId>("planning");
   const [pending, startTransition] = useTransition();
 
@@ -659,13 +663,14 @@ function NewTaskRow({
         title: title.trim(),
         assignee_id: groupAssigneeId,
         due_date: dueDate || null,
-        notes: "",
+        notes,
         status,
       });
       setTitle("");
       setClientId("");
       setJobId("");
       setDueDate("");
+      setNotes("");
       setStatus("planning");
     });
   }
@@ -689,7 +694,7 @@ function NewTaskRow({
           ))}
         </select>
       </div>
-      <div className="md:col-span-5 flex items-center gap-2">
+      <div className="md:col-span-3 flex items-center gap-2">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -697,21 +702,32 @@ function NewTaskRow({
             if (e.key === "Enter" && canSubmit) submit();
           }}
           placeholder="Add a task…"
-          className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900"
+          className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900 min-w-0"
         />
         <select
           value={jobId}
           onChange={(e) => setJobId(e.target.value)}
           disabled={!clientId}
-          className="text-xs border border-slate-200 rounded px-1.5 py-1 bg-white max-w-[160px]"
+          className="text-xs border border-slate-200 rounded px-1.5 py-1 bg-white max-w-[120px]"
         >
-          <option value="">{clientId ? "Job…" : "Pick client first"}</option>
+          <option value="">{clientId ? "Job…" : "Pick client"}</option>
           {filteredJobs.map((j) => (
             <option key={j.id} value={j.id}>
               {j.name}
             </option>
           ))}
         </select>
+      </div>
+      <div className="md:col-span-3">
+        <input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canSubmit) submit();
+          }}
+          placeholder="Notes (optional)"
+          className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900"
+        />
       </div>
       <div className="md:col-span-2">
         <input
@@ -721,11 +737,11 @@ function NewTaskRow({
           className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
         />
       </div>
-      <div className="md:col-span-3 flex items-center gap-2">
+      <div className="md:col-span-2 flex items-center gap-1">
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as TaskStatusId)}
-          className="flex-1 text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+          className="flex-1 text-xs border border-slate-200 rounded px-1.5 py-1 bg-white min-w-0"
         >
           {TASK_STATUSES.map((s) => (
             <option key={s.id} value={s.id}>
@@ -736,7 +752,7 @@ function NewTaskRow({
         <button
           onClick={submit}
           disabled={!canSubmit || pending}
-          className="bg-slate-900 text-white text-xs px-3 py-1 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+          className="bg-slate-900 text-white text-xs px-2 py-1 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
         >
           <Plus className="w-3 h-3" /> {pending ? "…" : "Add"}
         </button>
