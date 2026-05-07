@@ -15,7 +15,7 @@ export default function LoginPage() {
         </div>
         <h2 className="text-lg font-semibold mb-1">Welcome</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Sign in with your email and password. New here? Create an account.
+          Sign in with your email and password.
         </p>
         <LoginForm />
       </div>

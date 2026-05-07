@@ -2,9 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { TASK_STATUSES } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import InviteButton from "./invite-button";
 
 export default async function TeamPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const [profilesRes, tasksRes, jobsRes, clientsRes] = await Promise.all([
     supabase.from("profiles").select("*").order("name"),
     supabase.from("tasks").select("*"),
@@ -16,18 +20,26 @@ export default async function TeamPage() {
   const tasks: Task[] = tasksRes.data ?? [];
   const jobs: Job[] = jobsRes.data ?? [];
   const clients: Client[] = clientsRes.data ?? [];
+  const me = profiles.find((p) => p.id === user?.id);
+  const isAdmin = !!me?.is_admin;
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-1">Team</h2>
-        <p className="text-slate-500 text-sm">Who&apos;s working on what.</p>
+      <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Team</h2>
+          <p className="text-slate-500 text-sm">Who&apos;s working on what.</p>
+        </div>
+        {isAdmin && <InviteButton />}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {profiles.length === 0 && (
           <div className="md:col-span-2 bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
             <p className="text-slate-500 text-sm">
-              No team members yet. Invite people from your Supabase dashboard.
+              No team members yet.{" "}
+              {isAdmin
+                ? "Click \"Add user\" to invite someone."
+                : "Ask an admin to invite people."}
             </p>
           </div>
         )}
@@ -46,7 +58,14 @@ export default async function TeamPage() {
                   {p.name[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">{p.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{p.name}</h3>
+                    {p.is_admin && (
+                      <span className="text-[10px] uppercase tracking-wide bg-slate-900 text-white px-1.5 py-0.5 rounded">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-500">
                     {open.length} open · {overdue.length} overdue
                   </p>

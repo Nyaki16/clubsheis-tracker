@@ -4,27 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginForm() {
+export default function WelcomeForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) return;
-    setSubmitting(true);
     setError("");
-
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match.");
+      return;
+    }
+    setSubmitting(true);
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    const { error: authError } = await supabase.auth.updateUser({ password });
     if (authError) {
-      setSubmitting(false);
       setError(authError.message);
+      setSubmitting(false);
       return;
     }
     router.replace("/daily");
@@ -34,19 +37,7 @@ export default function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div>
-        <label className="text-sm font-medium block mb-1.5">Email</label>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          autoComplete="email"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium block mb-1.5">Password</label>
+        <label className="text-sm font-medium block mb-1.5">New password</label>
         <input
           type="password"
           required
@@ -54,7 +45,19 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
-          autoComplete="current-password"
+          autoComplete="new-password"
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium block mb-1.5">Confirm password</label>
+        <input
+          type="password"
+          required
+          minLength={8}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
           className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
         />
       </div>
@@ -63,12 +66,9 @@ export default function LoginForm() {
         disabled={submitting}
         className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
       >
-        {submitting ? "Signing in…" : "Sign in"}
+        {submitting ? "Saving…" : "Save password & continue"}
       </button>
-      {error && <p className="text-sm text-rose-600 mt-2">{error}</p>}
-      <p className="text-xs text-slate-400 text-center pt-2">
-        New here? Ask an admin to invite you.
-      </p>
+      {error && <p className="text-sm text-rose-600">{error}</p>}
     </form>
   );
 }
