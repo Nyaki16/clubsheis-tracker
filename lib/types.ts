@@ -36,6 +36,7 @@ export type Task = {
     | "awaiting_client"
     | "published"
     | "closed_out";
+  priority_rank: 1 | 2 | 3 | null;
   created_at: string;
   updated_at: string;
 };

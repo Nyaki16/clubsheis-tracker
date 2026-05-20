@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Calendar, ChevronDown, ChevronRight, Filter, Plus, Search, UserCog, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, ChevronDown, ChevronRight, Filter, Plus, Search, Star, UserCog, X } from "lucide-react";
 import Modal from "@/components/modal";
 import { JobForm } from "@/components/forms";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
@@ -12,6 +12,7 @@ import {
   bulkUpdateTasks,
   createTask,
   deleteTask,
+  toggleTaskPriority,
   updateTask,
   updateTaskStatus,
 } from "@/app/actions/tasks";
@@ -48,6 +49,7 @@ export default function DailyClient({
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDue, setFilterDue] = useState("all");
+  const [filterPriority, setFilterPriority] = useState<"all" | "top3">("all");
   const [hideClosed, setHideClosed] = useState(true);
   const [groupBy, setGroupBy] = useState<GroupBy>("assignee");
   const [sortKey, setSortKey] = useState<SortKey>("due");
@@ -84,6 +86,7 @@ export default function DailyClient({
     const q = search.trim().toLowerCase();
     return tasks.filter((t) => {
       if (hideClosed && t.status === "closed_out") return false;
+      if (filterPriority === "top3" && t.priority_rank == null) return false;
       if (filterAssignee !== "all") {
         if (filterAssignee === "unassigned" && t.assignee_id) return false;
         if (filterAssignee !== "unassigned" && t.assignee_id !== filterAssignee) return false;
@@ -106,12 +109,19 @@ export default function DailyClient({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, jobs, clients, search, filterAssignee, filterClient, filterStatus, filterDue, hideClosed]);
+  }, [tasks, jobs, clients, search, filterAssignee, filterClient, filterStatus, filterDue, filterPriority, hideClosed]);
 
   const sortFn = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
     const statusOrder = new Map(TASK_STATUSES.map((s, i) => [s.id, i]));
     return (a: Task, b: Task) => {
+      // Top 3 priorities always float to the top, ranked 1 → 2 → 3.
+      const ar = a.priority_rank;
+      const br = b.priority_rank;
+      if (ar != null && br != null) return ar - br;
+      if (ar != null) return -1;
+      if (br != null) return 1;
+
       let av: string | number = "";
       let bv: string | number = "";
       if (sortKey === "client") {
@@ -330,7 +340,7 @@ export default function DailyClient({
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500">Group by</span>
             <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
               {(["assignee", "client", "none"] as const).map((g) => (
@@ -347,6 +357,24 @@ export default function DailyClient({
                 </button>
               ))}
             </div>
+            <button
+              onClick={() =>
+                setFilterPriority(filterPriority === "top3" ? "all" : "top3")
+              }
+              className={`text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border ${
+                filterPriority === "top3"
+                  ? "bg-amber-100 border-amber-300 text-amber-800"
+                  : "bg-white border-slate-200 text-slate-500 hover:text-slate-700"
+              }`}
+              title="Show only Top 3 priorities"
+            >
+              <Star
+                className={`w-3 h-3 ${
+                  filterPriority === "top3" ? "fill-amber-500 text-amber-500" : ""
+                }`}
+              />
+              Top 3 only
+            </button>
           </div>
           <div className="text-xs text-slate-500">
             Showing{" "}
@@ -591,29 +619,32 @@ function TaskRow({
       </div>
 
       <div className="md:col-span-3 min-w-0">
-        {editingTitle ? (
-          <input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={saveTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveTitle();
-              if (e.key === "Escape") {
-                setTitleDraft(task.title);
-                setEditingTitle(false);
-              }
-            }}
-            className="w-full text-sm font-medium leading-tight border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
-          />
-        ) : (
-          <button
-            onClick={() => setEditingTitle(true)}
-            className="text-left text-sm font-medium leading-tight hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full truncate"
-          >
-            {task.title}
-          </button>
-        )}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <PriorityStar task={task} />
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveTitle();
+                if (e.key === "Escape") {
+                  setTitleDraft(task.title);
+                  setEditingTitle(false);
+                }
+              }}
+              className="flex-1 min-w-0 text-sm font-medium leading-tight border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+            />
+          ) : (
+            <button
+              onClick={() => setEditingTitle(true)}
+              className="text-left text-sm font-medium leading-tight hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 flex-1 min-w-0 truncate"
+            >
+              {task.title}
+            </button>
+          )}
+        </div>
         {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
       </div>
 
@@ -740,6 +771,50 @@ function TaskRow({
         </button>
       </div>
     </div>
+  );
+}
+
+function PriorityStar({ task }: { task: Task }) {
+  const [pending, startTransition] = useTransition();
+  const rank = task.priority_rank;
+  const isSet = rank != null;
+
+  function toggle() {
+    startTransition(async () => {
+      try {
+        await toggleTaskPriority(task.id);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Could not update Top 3.";
+        alert(msg);
+      }
+    });
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={pending}
+      title={
+        isSet
+          ? `Top 3 — priority ${rank}. Click to remove.`
+          : "Mark as Top 3 priority"
+      }
+      aria-label={isSet ? `Remove priority ${rank}` : "Mark as Top 3 priority"}
+      className={`flex-shrink-0 inline-flex items-center justify-center rounded-md transition ${
+        isSet
+          ? "text-amber-600 hover:text-amber-700"
+          : "text-slate-300 hover:text-amber-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
+      } ${pending ? "opacity-50" : ""}`}
+    >
+      {isSet ? (
+        <span className="inline-flex items-center gap-0.5 bg-amber-100 border border-amber-300 rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-none">
+          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+          {rank}
+        </span>
+      ) : (
+        <Star className="w-4 h-4" />
+      )}
+    </button>
   );
 }
 

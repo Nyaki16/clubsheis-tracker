@@ -3,6 +3,7 @@ import { TASK_STATUSES } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import InviteButton from "./invite-button";
+import MemberActions from "./member-actions";
 
 export default async function TeamPage() {
   const supabase = await createClient();
@@ -104,6 +105,13 @@ export default async function TeamPage() {
                   );
                 })}
               </div>
+              {isAdmin && (
+                <MemberActions
+                  profileId={p.id}
+                  isAdminUser={p.is_admin}
+                  isSelf={p.id === user?.id}
+                />
+              )}
             </div>
           );
         })}

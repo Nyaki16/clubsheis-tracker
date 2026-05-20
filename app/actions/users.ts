@@ -57,6 +57,44 @@ export async function inviteUser(name: string, email: string): Promise<InviteRes
   };
 }
 
+export async function reinviteUser(profileId: string): Promise<InviteResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Forbidden." };
+  }
+
+  const admin = createAdminClient();
+  const { data: profile, error: profileErr } = await admin
+    .from("profiles")
+    .select("email, name")
+    .eq("id", profileId)
+    .single();
+  if (profileErr || !profile?.email) {
+    return { ok: false, message: "Could not find that user." };
+  }
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${proto}://${host}` : "";
+
+  const { error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email: profile.email,
+    options: {
+      redirectTo: origin ? `${origin}/auth/callback?next=/welcome` : undefined,
+    },
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  return {
+    ok: true,
+    message: `Reset link sent to ${profile.email}. They can set a new password from the email.`,
+  };
+}
+
 export async function setIsAdmin(profileId: string, isAdmin: boolean): Promise<InviteResult> {
   try {
     await requireAdmin();

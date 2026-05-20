@@ -48,6 +48,65 @@ export async function updateTask(id: string, updates: Partial<TaskInput>) {
   revalidatePath("/clients");
 }
 
+/**
+ * Toggle a task in/out of its assignee's Top 3.
+ *
+ * - If the task is already ranked: clears the rank.
+ * - Otherwise: assigns the lowest free rank (1, 2, or 3) for the assignee.
+ *
+ * Throws a user-readable message if the task is unassigned or the assignee
+ * already has three ranked tasks. The DB-level partial unique index on
+ * (assignee_id, priority_rank) is the source of truth for the hard cap.
+ */
+export async function toggleTaskPriority(id: string) {
+  const supabase = await createClient();
+
+  const { data: task, error: fetchErr } = await supabase
+    .from("tasks")
+    .select("id, assignee_id, priority_rank")
+    .eq("id", id)
+    .single();
+  if (fetchErr || !task) {
+    throw new Error(fetchErr?.message ?? "Task not found");
+  }
+
+  if (task.priority_rank !== null) {
+    const { error } = await supabase
+      .from("tasks")
+      .update({ priority_rank: null })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  } else {
+    if (!task.assignee_id) {
+      throw new Error("Assign this task to someone before marking it as Top 3.");
+    }
+
+    const { data: existing, error: listErr } = await supabase
+      .from("tasks")
+      .select("priority_rank")
+      .eq("assignee_id", task.assignee_id)
+      .not("priority_rank", "is", null);
+    if (listErr) throw new Error(listErr.message);
+
+    const taken = new Set((existing ?? []).map((t) => t.priority_rank));
+    const nextRank = [1, 2, 3].find((r) => !taken.has(r));
+    if (!nextRank) {
+      throw new Error("Top 3 is full — unstar one of the priorities first.");
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ priority_rank: nextRank })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/daily");
+  revalidatePath("/dashboard");
+  revalidatePath("/team");
+  revalidatePath("/clients");
+}
+
 export async function updateTaskStatus(id: string, status: TaskStatusId) {
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").update({ status }).eq("id", id);
