@@ -37,6 +37,10 @@ export async function updateClient(id: string, input: Partial<ClientProfileInput
     "website_url",
     "google_drive_url",
     "canva_brand_url",
+    "client_profile_doc_url",
+    "research_bible_doc_url",
+    "brand_voice_doc_url",
+    "strategy_brief_doc_url",
   ];
   for (const k of keys) {
     if (input[k] !== undefined) {

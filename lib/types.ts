@@ -21,6 +21,10 @@ export type Client = {
   website_url: string | null;
   google_drive_url: string | null;
   canva_brand_url: string | null;
+  client_profile_doc_url: string | null;
+  research_bible_doc_url: string | null;
+  brand_voice_doc_url: string | null;
+  strategy_brief_doc_url: string | null;
   created_at: string;
 };
 
@@ -37,6 +41,17 @@ export type ClientProfileInput = {
   website_url: string | null;
   google_drive_url: string | null;
   canva_brand_url: string | null;
+  client_profile_doc_url: string | null;
+  research_bible_doc_url: string | null;
+  brand_voice_doc_url: string | null;
+  strategy_brief_doc_url: string | null;
+};
+
+export type ClientFlowDocs = {
+  client_profile_doc_url: string | null;
+  research_bible_doc_url: string | null;
+  brand_voice_doc_url: string | null;
+  strategy_brief_doc_url: string | null;
 };
 
 export type Job = {

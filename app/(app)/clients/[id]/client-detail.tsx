@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  FileText,
   Globe,
   Hash,
   Link as LinkIcon,
@@ -24,7 +25,7 @@ import {
   TASK_STATUSES,
   type TaskStatusId,
 } from "@/lib/constants";
-import type { Client, Job, Profile, Task } from "@/lib/types";
+import type { Client, ClientFlowDocs, Job, Profile, Task } from "@/lib/types";
 import { formatDate, isOverdue } from "@/lib/utils";
 import { updateClient } from "@/app/actions/clients";
 import {
@@ -57,16 +58,32 @@ const LINK_FIELDS: {
   { key: "canva_brand_url", label: "Canva", Icon: ExternalLink },
 ];
 
+const DOC_FIELDS: {
+  manualKey:
+    | "client_profile_doc_url"
+    | "research_bible_doc_url"
+    | "brand_voice_doc_url"
+    | "strategy_brief_doc_url";
+  label: string;
+}[] = [
+  { manualKey: "client_profile_doc_url", label: "Client Profile" },
+  { manualKey: "research_bible_doc_url", label: "Research Bible" },
+  { manualKey: "brand_voice_doc_url", label: "Brand Voice" },
+  { manualKey: "strategy_brief_doc_url", label: "Strategy Brief" },
+];
+
 export default function ClientDetail({
   client,
   jobs,
   tasks,
   profiles,
+  clientFlowDocs,
 }: {
   client: Client;
   jobs: Job[];
   tasks: Task[];
   profiles: Profile[];
+  clientFlowDocs: ClientFlowDocs;
 }) {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileCollapsed, setProfileCollapsed] = useState(false);
@@ -196,6 +213,69 @@ export default function ClientDetail({
                 {label}
               </a>
             ))}
+          </div>
+        )}
+
+        {!profileCollapsed && (
+          <div className="mt-5 pt-4 border-t border-slate-100">
+            <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">
+              Strategy documents
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {DOC_FIELDS.map(({ manualKey, label }) => {
+                const manual = client[manualKey];
+                const fromFlow = clientFlowDocs[manualKey];
+                const url = manual || fromFlow;
+                const source = manual
+                  ? "manual"
+                  : fromFlow
+                  ? "client-flow"
+                  : null;
+                return (
+                  <div
+                    key={manualKey}
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-slate-200 bg-white"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 truncate">
+                        {label}
+                      </span>
+                      {source === "client-flow" && (
+                        <span
+                          title="Auto-pulled from the client-flow app"
+                          className="text-[10px] uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded"
+                        >
+                          Auto
+                        </span>
+                      )}
+                      {source === "manual" && (
+                        <span
+                          title="Manual override set in Edit profile"
+                          className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded"
+                        >
+                          Manual
+                        </span>
+                      )}
+                    </div>
+                    {url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline flex items-center gap-1 flex-shrink-0"
+                      >
+                        Open <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic flex-shrink-0">
+                        Not set
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

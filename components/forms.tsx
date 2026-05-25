@@ -361,6 +361,16 @@ const PROFILE_FIELDS: {
   { key: "canva_brand_url", label: "Canva brand kit", placeholder: "https://canva.com/brand/…" },
 ];
 
+const DOC_OVERRIDE_FIELDS: {
+  key: keyof ClientProfileInput;
+  label: string;
+}[] = [
+  { key: "client_profile_doc_url", label: "Client Profile doc" },
+  { key: "research_bible_doc_url", label: "Research Bible doc" },
+  { key: "brand_voice_doc_url", label: "Brand Voice doc" },
+  { key: "strategy_brief_doc_url", label: "Strategy Brief doc" },
+];
+
 export function ClientProfileForm({
   client,
   onSubmit,
@@ -381,6 +391,10 @@ export function ClientProfileForm({
     website_url: client.website_url,
     google_drive_url: client.google_drive_url,
     canva_brand_url: client.canva_brand_url,
+    client_profile_doc_url: client.client_profile_doc_url,
+    research_bible_doc_url: client.research_bible_doc_url,
+    brand_voice_doc_url: client.brand_voice_doc_url,
+    strategy_brief_doc_url: client.strategy_brief_doc_url,
   });
   const [pending, startTransition] = useTransition();
 
@@ -391,12 +405,18 @@ export function ClientProfileForm({
   function submit() {
     if (!form.name.trim()) return;
     startTransition(async () => {
+      const trimOrNull = (v: string | null | undefined) =>
+        v && v.trim() ? v.trim() : null;
       await onSubmit({
         ...form,
         name: form.name.trim(),
-        business_name: form.business_name?.trim() || null,
-        about: form.about?.trim() || null,
-        profile_pic_url: form.profile_pic_url?.trim() || null,
+        business_name: trimOrNull(form.business_name),
+        about: trimOrNull(form.about),
+        profile_pic_url: trimOrNull(form.profile_pic_url),
+        client_profile_doc_url: trimOrNull(form.client_profile_doc_url),
+        research_bible_doc_url: trimOrNull(form.research_bible_doc_url),
+        brand_voice_doc_url: trimOrNull(form.brand_voice_doc_url),
+        strategy_brief_doc_url: trimOrNull(form.strategy_brief_doc_url),
       });
     });
   }
@@ -473,6 +493,31 @@ export function ClientProfileForm({
             />
           </div>
         ))}
+      </div>
+
+      <div className="pt-4 border-t border-slate-100">
+        <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1">
+          Strategy doc overrides
+        </div>
+        <p className="text-xs text-slate-400 mb-3">
+          Leave blank to use the URL auto-pulled from the client-flow app. Fill
+          in to override (e.g. if names don&apos;t match exactly).
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {DOC_OVERRIDE_FIELDS.map((f) => (
+            <div key={f.key}>
+              <label className="text-sm font-medium block mb-1.5">
+                {f.label}
+              </label>
+              <input
+                value={(form[f.key] as string | null) ?? ""}
+                onChange={(e) => set(f.key, e.target.value)}
+                placeholder="https://docs.google.com/…"
+                className={input}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <button

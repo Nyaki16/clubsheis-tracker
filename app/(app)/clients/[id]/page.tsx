@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchClientFlowDocs } from "@/lib/client-flow";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import ClientDetail from "./client-detail";
 
@@ -19,7 +20,7 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [jobsRes, tasksRes, profilesRes] = await Promise.all([
+  const [jobsRes, tasksRes, profilesRes, clientFlowDocs] = await Promise.all([
     supabase
       .from("jobs")
       .select("*")
@@ -30,6 +31,7 @@ export default async function ClientDetailPage({
       .select("*")
       .order("created_at", { ascending: false }),
     supabase.from("profiles").select("*").order("name"),
+    fetchClientFlowDocs(client.name),
   ]);
 
   const jobs: Job[] = jobsRes.data ?? [];
@@ -44,6 +46,7 @@ export default async function ClientDetailPage({
       jobs={jobs}
       tasks={tasks}
       profiles={profiles}
+      clientFlowDocs={clientFlowDocs}
     />
   );
 }
