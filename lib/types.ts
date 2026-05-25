@@ -10,7 +10,33 @@ export type Client = {
   id: string;
   name: string;
   color: string;
+  business_name: string | null;
+  about: string | null;
+  profile_pic_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  facebook_url: string | null;
+  linkedin_url: string | null;
+  youtube_url: string | null;
+  website_url: string | null;
+  google_drive_url: string | null;
+  canva_brand_url: string | null;
   created_at: string;
+};
+
+export type ClientProfileInput = {
+  name: string;
+  business_name: string | null;
+  about: string | null;
+  profile_pic_url: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  facebook_url: string | null;
+  linkedin_url: string | null;
+  youtube_url: string | null;
+  website_url: string | null;
+  google_drive_url: string | null;
+  canva_brand_url: string | null;
 };
 
 export type Job = {

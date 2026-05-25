@@ -56,6 +56,32 @@ export default function DailyClient({
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showNewJob, setShowNewJob] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("daily.collapsedGroups");
+      if (raw) setCollapsedGroups(new Set(JSON.parse(raw)));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "daily.collapsedGroups",
+        JSON.stringify(Array.from(collapsedGroups))
+      );
+    } catch {}
+  }, [collapsedGroups]);
+
+  function toggleGroupCollapsed(key: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -389,6 +415,7 @@ export default function DailyClient({
           const groupIds = g.list.map((t) => t.id);
           const allSelected = groupIds.length > 0 && groupIds.every((id) => selected.has(id));
           const someSelected = groupIds.some((id) => selected.has(id));
+          const isCollapsed = collapsedGroups.has(g.key);
           return (
           <div
             key={g.key}
@@ -407,55 +434,69 @@ export default function DailyClient({
                   className="rounded cursor-pointer"
                   aria-label={`Select all in ${g.label}`}
                 />
-                {g.dotColor ? (
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                    style={{ backgroundColor: g.dotColor }}
-                  >
-                    {g.avatarText}
-                  </div>
-                ) : g.avatarText ? (
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm ${g.avatarBg}`}
-                  >
-                    {g.avatarText}
-                  </div>
-                ) : null}
-                <h3 className="font-semibold">{g.label}</h3>
+                <button
+                  onClick={() => toggleGroupCollapsed(g.key)}
+                  className="flex items-center gap-3 group/header hover:opacity-80 transition-opacity"
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${g.label}`}
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover/header:text-slate-700" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-400 group-hover/header:text-slate-700" />
+                  )}
+                  {g.dotColor ? (
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                      style={{ backgroundColor: g.dotColor }}
+                    >
+                      {g.avatarText}
+                    </div>
+                  ) : g.avatarText ? (
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm ${g.avatarBg}`}
+                    >
+                      {g.avatarText}
+                    </div>
+                  ) : null}
+                  <h3 className="font-semibold">{g.label}</h3>
+                </button>
               </div>
               <span className="text-xs text-slate-500 font-medium">
                 {g.list.length} {g.list.length === 1 ? "task" : "tasks"}
               </span>
             </div>
-            <div className="divide-y divide-slate-100">
-              <SortHeader sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-              {g.list.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  job={getJob(task.job_id) ?? null}
-                  client={
-                    getJob(task.job_id)
-                      ? getClient(getJob(task.job_id)!.client_id) ?? null
-                      : null
-                  }
-                  profiles={profiles}
-                  selected={selected.has(task.id)}
-                  onToggleSelected={() => toggleSelected(task.id)}
+            {!isCollapsed && (
+              <div className="divide-y divide-slate-100">
+                <SortHeader sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                {g.list.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    job={getJob(task.job_id) ?? null}
+                    client={
+                      getJob(task.job_id)
+                        ? getClient(getJob(task.job_id)!.client_id) ?? null
+                        : null
+                    }
+                    profiles={profiles}
+                    selected={selected.has(task.id)}
+                    onToggleSelected={() => toggleSelected(task.id)}
+                  />
+                ))}
+                {g.list.length === 0 && (
+                  <div className="px-5 py-3 text-xs text-slate-400 italic">
+                    No tasks yet — add one below.
+                  </div>
+                )}
+                <NewTaskRow
+                  groupAssigneeId={g.groupAssigneeId}
+                  groupClientId={g.groupClientId}
+                  clients={clients}
+                  jobs={jobs}
                 />
-              ))}
-              {g.list.length === 0 && (
-                <div className="px-5 py-3 text-xs text-slate-400 italic">
-                  No tasks yet — add one below.
-                </div>
-              )}
-              <NewTaskRow
-                groupAssigneeId={g.groupAssigneeId}
-                groupClientId={g.groupClientId}
-                clients={clients}
-                jobs={jobs}
-              />
-            </div>
+              </div>
+            )}
           </div>
           );
         })}
@@ -778,17 +819,27 @@ function PriorityStar({ task }: { task: Task }) {
   const [pending, startTransition] = useTransition();
   const rank = task.priority_rank;
   const isSet = rank != null;
+  const isAssigned = task.assignee_id != null;
 
   function toggle() {
+    if (!isAssigned && !isSet) {
+      alert("Assign this task to someone before marking it as Top 3.");
+      return;
+    }
     startTransition(async () => {
       try {
         await toggleTaskPriority(task.id);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Could not update Top 3.";
-        alert(msg);
+        const raw = e instanceof Error ? e.message : "Could not update Top 3.";
+        const friendly = /Server Components render|digest/i.test(raw)
+          ? "Something went wrong updating Top 3. Try refreshing the page."
+          : raw;
+        alert(friendly);
       }
     });
   }
+
+  const disabledForUnassigned = !isAssigned && !isSet;
 
   return (
     <button
@@ -797,12 +848,16 @@ function PriorityStar({ task }: { task: Task }) {
       title={
         isSet
           ? `Top 3 — priority ${rank}. Click to remove.`
+          : disabledForUnassigned
+          ? "Assign this task first to mark it as Top 3."
           : "Mark as Top 3 priority"
       }
       aria-label={isSet ? `Remove priority ${rank}` : "Mark as Top 3 priority"}
       className={`flex-shrink-0 inline-flex items-center justify-center rounded-md transition ${
         isSet
           ? "text-amber-600 hover:text-amber-700"
+          : disabledForUnassigned
+          ? "text-slate-200 cursor-not-allowed opacity-0 group-hover:opacity-100"
           : "text-slate-300 hover:text-amber-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
       } ${pending ? "opacity-50" : ""}`}
     >

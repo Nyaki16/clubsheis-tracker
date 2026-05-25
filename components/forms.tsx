@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import { JOB_TEMPLATES } from "@/lib/job-templates";
-import type { Profile, Client, Job, Task } from "@/lib/types";
+import type { Profile, Client, ClientProfileInput, Job, Task } from "@/lib/types";
 
 export function ClientForm({ onSubmit }: { onSubmit: (name: string) => Promise<void> }) {
   const [name, setName] = useState("");
@@ -341,6 +341,146 @@ export function DeliverableForm({
         className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
       >
         {pending ? "Adding…" : "Add deliverable"}
+      </button>
+    </div>
+  );
+}
+
+const PROFILE_FIELDS: {
+  key: keyof Omit<ClientProfileInput, "name" | "business_name" | "about" | "profile_pic_url">;
+  label: string;
+  placeholder: string;
+}[] = [
+  { key: "website_url", label: "Website", placeholder: "https://example.com" },
+  { key: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/handle" },
+  { key: "tiktok_url", label: "TikTok", placeholder: "https://tiktok.com/@handle" },
+  { key: "facebook_url", label: "Facebook", placeholder: "https://facebook.com/page" },
+  { key: "linkedin_url", label: "LinkedIn", placeholder: "https://linkedin.com/in/handle" },
+  { key: "youtube_url", label: "YouTube", placeholder: "https://youtube.com/@channel" },
+  { key: "google_drive_url", label: "Google Drive folder", placeholder: "https://drive.google.com/…" },
+  { key: "canva_brand_url", label: "Canva brand kit", placeholder: "https://canva.com/brand/…" },
+];
+
+export function ClientProfileForm({
+  client,
+  onSubmit,
+}: {
+  client: Client;
+  onSubmit: (input: ClientProfileInput) => Promise<void>;
+}) {
+  const [form, setForm] = useState<ClientProfileInput>({
+    name: client.name,
+    business_name: client.business_name,
+    about: client.about,
+    profile_pic_url: client.profile_pic_url,
+    instagram_url: client.instagram_url,
+    tiktok_url: client.tiktok_url,
+    facebook_url: client.facebook_url,
+    linkedin_url: client.linkedin_url,
+    youtube_url: client.youtube_url,
+    website_url: client.website_url,
+    google_drive_url: client.google_drive_url,
+    canva_brand_url: client.canva_brand_url,
+  });
+  const [pending, startTransition] = useTransition();
+
+  function set<K extends keyof ClientProfileInput>(key: K, value: ClientProfileInput[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function submit() {
+    if (!form.name.trim()) return;
+    startTransition(async () => {
+      await onSubmit({
+        ...form,
+        name: form.name.trim(),
+        business_name: form.business_name?.trim() || null,
+        about: form.about?.trim() || null,
+        profile_pic_url: form.profile_pic_url?.trim() || null,
+      });
+    });
+  }
+
+  const input =
+    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900";
+
+  return (
+    <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Client name</label>
+          <input
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="Palesa Dooms"
+            className={input}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Business name</label>
+          <input
+            value={form.business_name ?? ""}
+            onChange={(e) => set("business_name", e.target.value)}
+            placeholder="Dooms Studio"
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium block mb-1.5">Profile picture URL</label>
+        <input
+          value={form.profile_pic_url ?? ""}
+          onChange={(e) => set("profile_pic_url", e.target.value)}
+          placeholder="https://… (paste a public image link)"
+          className={input}
+        />
+        {form.profile_pic_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={form.profile_pic_url}
+            alt="Profile preview"
+            className="mt-2 w-16 h-16 rounded-full object-cover border border-slate-200"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
+      </div>
+
+      <div>
+        <label className="text-sm font-medium block mb-1.5">
+          About / background / offerings
+        </label>
+        <textarea
+          value={form.about ?? ""}
+          onChange={(e) => set("about", e.target.value)}
+          placeholder="Who they are, what their business does, what they sell…"
+          rows={5}
+          className={input + " resize-y min-h-[100px]"}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {PROFILE_FIELDS.map((f) => (
+          <div key={f.key}>
+            <label className="text-sm font-medium block mb-1.5">{f.label}</label>
+            <input
+              value={(form[f.key] as string | null) ?? ""}
+              onChange={(e) => set(f.key, e.target.value)}
+              placeholder={f.placeholder}
+              className={input}
+            />
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={submit}
+        disabled={pending}
+        className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
+      >
+        {pending ? "Saving…" : "Save changes"}
       </button>
     </div>
   );
