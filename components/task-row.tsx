@@ -70,10 +70,11 @@ export function TaskGridHeader({
       <ColButton k="task" span="col-span-3">
         Task
       </ColButton>
-      <div className="col-span-3">Notes</div>
-      <ColButton k="due" span="col-span-2">
+      <div className="col-span-2">Notes</div>
+      <ColButton k="due" span="col-span-1">
         Due
       </ColButton>
+      <div className="col-span-2">Assignee</div>
       <ColButton k="status" span="col-span-2">
         Status
       </ColButton>
@@ -310,7 +311,7 @@ export function TaskGridRow({
         {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
       </div>
 
-      <div className="md:col-span-3 min-w-0 pt-1">
+      <div className="md:col-span-2 min-w-0 pt-1">
         {editingNotes ? (
           <textarea
             autoFocus
@@ -358,7 +359,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 pt-1">
+      <div className="md:col-span-1 pt-1 min-w-0">
         {editingDate ? (
           <input
             type="date"
@@ -374,12 +375,12 @@ export function TaskGridRow({
         ) : task.due_date ? (
           <button
             onClick={() => setEditingDate(true)}
-            className={`text-sm flex items-center gap-1 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 ${
+            className={`text-sm flex items-center gap-1 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 truncate ${
               overdue ? "text-rose-600 font-medium" : "text-slate-600"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            {formatDate(task.due_date)}
+            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">{formatDate(task.due_date)}</span>
           </button>
         ) : (
           <button
@@ -391,7 +392,32 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 flex items-center gap-1 pt-0.5 relative">
+      <div className="md:col-span-2 pt-1 relative min-w-0">
+        <button
+          onClick={() => setReassigning((v) => !v)}
+          className={`text-sm flex items-center gap-1.5 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full text-left min-w-0 ${
+            task.assignee_id ? "text-slate-700" : "text-slate-400"
+          }`}
+          title="Click to reassign"
+        >
+          <UserCog className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+          <span className="truncate">
+            {task.assignee_id
+              ? profiles.find((p) => p.id === task.assignee_id)?.name ?? "Unknown"
+              : "Unassigned"}
+          </span>
+        </button>
+        {reassigning && (
+          <ReassignPopover
+            currentId={task.assignee_id}
+            profiles={profiles}
+            onPick={reassign}
+            onClose={() => setReassigning(false)}
+          />
+        )}
+      </div>
+
+      <div className="md:col-span-2 flex items-center gap-1 pt-0.5">
         <select
           value={task.status}
           onChange={(e) =>
@@ -407,21 +433,6 @@ export function TaskGridRow({
             </option>
           ))}
         </select>
-        <button
-          onClick={() => setReassigning((v) => !v)}
-          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-900 p-1"
-          title="Reassign"
-        >
-          <UserCog className="w-4 h-4" />
-        </button>
-        {reassigning && (
-          <ReassignPopover
-            currentId={task.assignee_id}
-            profiles={profiles}
-            onPick={reassign}
-            onClose={() => setReassigning(false)}
-          />
-        )}
         <button
           onClick={() => {
             if (confirm("Delete this task?"))
