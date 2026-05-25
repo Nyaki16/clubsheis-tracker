@@ -69,15 +69,20 @@ export default function ClientDetail({
   profiles: Profile[];
 }) {
   const [editingProfile, setEditingProfile] = useState(false);
+  const [profileCollapsed, setProfileCollapsed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(jobs.map((j) => j.id))
   );
   const storageKey = `client.${client.id}.expandedJobs`;
+  const profileStorageKey = `client.${client.id}.profileCollapsed`;
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setExpanded(new Set(JSON.parse(raw)));
+      const rawProfile = localStorage.getItem(profileStorageKey);
+      if (rawProfile) setProfileCollapsed(rawProfile === "1");
     } catch {}
     // Only on mount per client.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,6 +93,17 @@ export default function ClientDetail({
       localStorage.setItem(storageKey, JSON.stringify(Array.from(expanded)));
     } catch {}
   }, [expanded, storageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(profileStorageKey, profileCollapsed ? "1" : "0");
+    } catch {}
+  }, [profileCollapsed, profileStorageKey]);
+
+  // Reset image-failed state when the URL changes.
+  useEffect(() => {
+    setImgFailed(false);
+  }, [client.profile_pic_url]);
 
   function toggleJob(id: string) {
     setExpanded((prev) => {
@@ -111,34 +127,47 @@ export default function ClientDetail({
 
       <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-start gap-4 flex-1 min-w-0">
-            {client.profile_pic_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={client.profile_pic_url}
-                alt={client.name}
-                className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-              />
+          <button
+            onClick={() => setProfileCollapsed((v) => !v)}
+            className="flex items-start gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+            aria-expanded={!profileCollapsed}
+            aria-label={`${profileCollapsed ? "Expand" : "Collapse"} profile`}
+          >
+            {profileCollapsed ? (
+              <ChevronRight className="w-4 h-4 text-slate-400 mt-1.5 flex-shrink-0" />
             ) : (
-              <div
-                className="w-16 h-16 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0"
-                style={{ backgroundColor: client.color }}
-              >
-                {client.name[0]?.toUpperCase()}
-              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400 mt-1.5 flex-shrink-0" />
             )}
-            <div className="min-w-0 flex-1">
-              <h2 className="text-2xl font-bold leading-tight">{client.name}</h2>
-              {client.business_name && (
-                <p className="text-slate-600 text-sm mt-0.5">
-                  {client.business_name}
-                </p>
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              {client.profile_pic_url && !imgFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={client.profile_pic_url}
+                  alt={client.name}
+                  className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0"
+                  onError={() => setImgFailed(true)}
+                />
+              ) : (
+                <div
+                  className="w-16 h-16 rounded-xl flex items-center justify-center text-white font-bold text-2xl flex-shrink-0"
+                  style={{ backgroundColor: client.color }}
+                >
+                  {client.name[0]?.toUpperCase()}
+                </div>
               )}
-              <p className="text-slate-500 text-xs mt-1">
-                {jobs.length} total {jobs.length === 1 ? "job" : "jobs"}
-              </p>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-2xl font-bold leading-tight">{client.name}</h2>
+                {client.business_name && (
+                  <p className="text-slate-600 text-sm mt-0.5">
+                    {client.business_name}
+                  </p>
+                )}
+                <p className="text-slate-500 text-xs mt-1">
+                  {jobs.length} total {jobs.length === 1 ? "job" : "jobs"}
+                </p>
+              </div>
             </div>
-          </div>
+          </button>
           <button
             onClick={() => setEditingProfile(true)}
             className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 hover:bg-slate-50"
@@ -147,13 +176,13 @@ export default function ClientDetail({
           </button>
         </div>
 
-        {client.about && (
+        {!profileCollapsed && client.about && (
           <p className="text-sm text-slate-600 whitespace-pre-wrap mt-4 leading-relaxed">
             {client.about}
           </p>
         )}
 
-        {visibleLinks.length > 0 && (
+        {!profileCollapsed && visibleLinks.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
             {visibleLinks.map(({ key, label, Icon }) => (
               <a

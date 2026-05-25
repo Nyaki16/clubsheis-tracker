@@ -49,21 +49,8 @@ export default function ClientsList({
               className="bg-white rounded-xl border border-slate-200 p-5 hover:border-slate-400 hover:shadow-sm transition group"
             >
               <div className="flex items-start justify-between mb-3">
-                {client.profile_pic_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={client.profile_pic_url}
-                    alt={client.name}
-                    className="w-10 h-10 rounded-lg object-cover border border-slate-200"
-                  />
-                ) : (
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                    style={{ backgroundColor: client.color }}
-                  >
-                    {client.name[0]?.toUpperCase()}
-                  </div>
-                )}
+                <ClientAvatar client={client} />
+
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                   <button
                     onClick={(e) => {
@@ -125,6 +112,29 @@ export default function ClientsList({
           />
         </Modal>
       )}
+    </div>
+  );
+}
+
+function ClientAvatar({ client }: { client: Client }) {
+  const [failed, setFailed] = useState(false);
+  if (client.profile_pic_url && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={client.profile_pic_url}
+        alt={client.name}
+        className="w-10 h-10 rounded-lg object-cover border border-slate-200"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div
+      className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+      style={{ backgroundColor: client.color }}
+    >
+      {client.name[0]?.toUpperCase()}
     </div>
   );
 }
