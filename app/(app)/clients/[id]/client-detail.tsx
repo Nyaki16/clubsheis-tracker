@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import {
   AtSign,
   Calendar,
@@ -13,27 +13,17 @@ import {
   Link as LinkIcon,
   Pencil,
   Plus,
-  Trash2,
-  User,
 } from "lucide-react";
 import Link from "next/link";
 import Modal from "@/components/modal";
 import { ClientProfileForm, TaskForm } from "@/components/forms";
+import { TaskGridHeader, TaskGridRow } from "@/components/task-row";
 import NewJobButton from "./new-job-button";
-import {
-  STAGES,
-  TASK_STATUSES,
-  type TaskStatusId,
-} from "@/lib/constants";
+import { STAGES } from "@/lib/constants";
 import type { Client, ClientFlowDocs, Job, Profile, Task } from "@/lib/types";
-import { formatDate, isOverdue } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { updateClient } from "@/app/actions/clients";
-import {
-  createTask,
-  deleteTask,
-  updateTask,
-  updateTaskStatus,
-} from "@/app/actions/tasks";
+import { createTask } from "@/app/actions/tasks";
 
 const LINK_FIELDS: {
   key:
@@ -351,6 +341,8 @@ export default function ClientDetail({
                 <JobTasksSection
                   jobId={job.id}
                   tasks={jobTasks}
+                  client={client}
+                  job={job}
                   profiles={profiles}
                 />
               )}
@@ -377,19 +369,21 @@ export default function ClientDetail({
 function JobTasksSection({
   jobId,
   tasks,
+  client,
+  job,
   profiles,
 }: {
   jobId: string;
   tasks: Task[];
+  client: Client;
+  job: Job;
   profiles: Profile[];
 }) {
   const [showNew, setShowNew] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [, startTransition] = useTransition();
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/40 px-4 py-3">
-      <div className="flex items-center justify-between mb-2">
+    <div className="border-t border-slate-100 bg-slate-50/40">
+      <div className="flex items-center justify-between px-5 py-2">
         <span className="text-xs uppercase tracking-wide text-slate-500 font-medium">
           Tasks
         </span>
@@ -400,87 +394,20 @@ function JobTasksSection({
           <Plus className="w-3.5 h-3.5" /> Add task
         </button>
       </div>
-      <div className="space-y-2">
+      <div className="divide-y divide-slate-100 bg-white">
+        <TaskGridHeader />
         {tasks.length === 0 && (
-          <p className="text-xs text-slate-400 italic">No tasks yet.</p>
+          <p className="px-5 py-3 text-xs text-slate-400 italic">No tasks yet.</p>
         )}
-        {tasks.map((task) => {
-          const status =
-            TASK_STATUSES.find((s) => s.id === task.status) ?? TASK_STATUSES[0];
-          const overdue =
-            isOverdue(task.due_date) &&
-            task.status !== "closed_out" &&
-            task.status !== "published";
-          const assignee = task.assignee_id
-            ? profiles.find((p) => p.id === task.assignee_id) ?? null
-            : null;
-          return (
-            <div
-              key={task.id}
-              className="p-3 rounded border border-slate-200 bg-white group"
-            >
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium leading-tight">{task.title}</p>
-                  {task.notes && (
-                    <p className="text-xs text-slate-500 mt-1 whitespace-pre-wrap">
-                      {task.notes}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setEditingTask(task)}
-                  className="opacity-0 group-hover:opacity-100 text-xs text-slate-500 hover:text-slate-900"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm("Delete this task?")) {
-                      startTransition(() => deleteTask(task.id));
-                    }
-                  }}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600"
-                  aria-label="Delete task"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {assignee && (
-                  <span className="text-xs text-slate-600 flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {assignee.name}
-                  </span>
-                )}
-                {task.due_date && (
-                  <span
-                    className={`text-xs flex items-center gap-1 ${
-                      overdue ? "text-rose-600 font-medium" : "text-slate-500"
-                    }`}
-                  >
-                    <Calendar className="w-3 h-3" /> {formatDate(task.due_date)}
-                  </span>
-                )}
-                <select
-                  value={task.status}
-                  onChange={(e) =>
-                    startTransition(() =>
-                      updateTaskStatus(task.id, e.target.value as TaskStatusId)
-                    )
-                  }
-                  className={`text-xs font-medium border rounded px-1.5 py-0.5 ml-auto ${status.color}`}
-                >
-                  {TASK_STATUSES.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          );
-        })}
+        {tasks.map((task) => (
+          <TaskGridRow
+            key={task.id}
+            task={task}
+            job={job}
+            client={client}
+            profiles={profiles}
+          />
+        ))}
       </div>
 
       {showNew && (
@@ -490,19 +417,6 @@ function JobTasksSection({
             onSubmit={async (input) => {
               await createTask(jobId, input);
               setShowNew(false);
-            }}
-          />
-        </Modal>
-      )}
-      {editingTask && (
-        <Modal title="Edit task" onClose={() => setEditingTask(null)}>
-          <TaskForm
-            profiles={profiles}
-            initial={editingTask}
-            submitLabel="Save changes"
-            onSubmit={async (input) => {
-              await updateTask(editingTask.id, input);
-              setEditingTask(null);
             }}
           />
         </Modal>
