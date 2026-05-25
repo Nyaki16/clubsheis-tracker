@@ -18,6 +18,7 @@ import Link from "next/link";
 import Modal from "@/components/modal";
 import { ClientProfileForm, TaskForm } from "@/components/forms";
 import { TaskGridHeader, TaskGridRow } from "@/components/task-row";
+import BulkActionBar from "@/components/bulk-action-bar";
 import NewJobButton from "./new-job-button";
 import { STAGES } from "@/lib/constants";
 import type { Client, ClientFlowDocs, Job, Profile, Task } from "@/lib/types";
@@ -78,9 +79,32 @@ export default function ClientDetail({
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileCollapsed, setProfileCollapsed] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(jobs.map((j) => j.id))
   );
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(ids: string[], checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) ids.forEach((id) => next.add(id));
+      else ids.forEach((id) => next.delete(id));
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
   const storageKey = `client.${client.id}.expandedJobs`;
   const profileStorageKey = `client.${client.id}.profileCollapsed`;
 
@@ -290,12 +314,27 @@ export default function ClientDetail({
             (t) => t.status === "closed_out" || t.status === "published"
           ).length;
           const isExpanded = expanded.has(job.id);
+          const jobTaskIds = jobTasks.map((t) => t.id);
+          const allSelected =
+            jobTaskIds.length > 0 && jobTaskIds.every((id) => selected.has(id));
+          const someSelected = jobTaskIds.some((id) => selected.has(id));
           return (
             <div
               key={job.id}
               className="bg-white rounded-xl border border-slate-200 overflow-hidden"
             >
               <div className="flex items-center gap-2 p-4">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allSelected && someSelected;
+                  }}
+                  onChange={(e) => toggleSelectAll(jobTaskIds, e.target.checked)}
+                  disabled={jobTaskIds.length === 0}
+                  className="rounded cursor-pointer flex-shrink-0"
+                  aria-label={`Select all tasks in ${job.name}`}
+                />
                 <button
                   onClick={() => toggleJob(job.id)}
                   className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
@@ -344,12 +383,22 @@ export default function ClientDetail({
                   client={client}
                   job={job}
                   profiles={profiles}
+                  selected={selected}
+                  onToggleSelected={toggleSelected}
                 />
               )}
             </div>
           );
         })}
       </div>
+
+      {selected.size > 0 && (
+        <BulkActionBar
+          selectedIds={Array.from(selected)}
+          profiles={profiles}
+          onClear={clearSelection}
+        />
+      )}
 
       {editingProfile && (
         <Modal title={`Edit ${client.name}`} onClose={() => setEditingProfile(false)}>
@@ -372,12 +421,16 @@ function JobTasksSection({
   client,
   job,
   profiles,
+  selected,
+  onToggleSelected,
 }: {
   jobId: string;
   tasks: Task[];
   client: Client;
   job: Job;
   profiles: Profile[];
+  selected: Set<string>;
+  onToggleSelected: (id: string) => void;
 }) {
   const [showNew, setShowNew] = useState(false);
 
@@ -406,6 +459,8 @@ function JobTasksSection({
             job={job}
             client={client}
             profiles={profiles}
+            selected={selected.has(task.id)}
+            onToggleSelected={() => onToggleSelected(task.id)}
           />
         ))}
       </div>
