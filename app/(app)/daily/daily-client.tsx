@@ -266,7 +266,7 @@ export default function DailyClient({
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 sticky top-[68px] z-10">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
