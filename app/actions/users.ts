@@ -9,6 +9,58 @@ export type InviteResult =
   | { ok: true; message: string }
   | { ok: false; message: string };
 
+// ── My profile (the signed-in user) ─────────────────────────────────────
+
+export type ProfileUpdate = {
+  name?: string;
+  avatar_url?: string | null;
+};
+
+export async function updateMyProfile(updates: ProfileUpdate): Promise<InviteResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const payload: Record<string, unknown> = {};
+  if (updates.name !== undefined) {
+    const next = updates.name.trim();
+    if (!next) return { ok: false, message: "Name can't be blank." };
+    payload.name = next;
+  }
+  if (updates.avatar_url !== undefined) {
+    payload.avatar_url = updates.avatar_url;
+  }
+  if (Object.keys(payload).length === 0) return { ok: true, message: "Nothing to update." };
+
+  const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/profile");
+  revalidatePath("/team");
+  revalidatePath("/daily");
+  revalidatePath("/dashboard");
+  revalidatePath("/clients");
+  return { ok: true, message: "Saved." };
+}
+
+export async function updateMyPassword(newPassword: string): Promise<InviteResult> {
+  if (!newPassword || newPassword.length < 8) {
+    return { ok: false, message: "Password must be at least 8 characters." };
+  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, message: error.message };
+
+  return { ok: true, message: "Password updated." };
+}
+
 async function requireAdmin() {
   const supabase = await createClient();
   const {

@@ -9,13 +9,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("name, email")
+    .select("name, email, avatar_url")
     .eq("id", user.id)
     .single();
 
   return (
     <>
-      <Nav profile={profile ?? { name: user.email ?? "Me", email: user.email ?? "" }} />
+      <Nav
+        profile={
+          profile ?? {
+            name: user.email ?? "Me",
+            email: user.email ?? "",
+            avatar_url: null,
+          }
+        }
+      />
       <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
     </>
   );

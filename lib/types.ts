@@ -3,6 +3,7 @@ export type Profile = {
   name: string;
   email: string;
   is_admin: boolean;
+  avatar_url: string | null;
   created_at: string;
 };
 

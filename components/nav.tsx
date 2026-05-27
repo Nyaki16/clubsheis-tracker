@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { LogOut } from "lucide-react";
+import { LogOut, User as UserIcon } from "lucide-react";
 
 const VIEWS = [
   { href: "/daily", label: "Daily Scroll" },
@@ -14,7 +14,11 @@ const VIEWS = [
   { href: "/team", label: "Team" },
 ];
 
-export default function Nav({ profile }: { profile: { name: string; email: string } }) {
+export default function Nav({
+  profile,
+}: {
+  profile: { name: string; email: string; avatar_url?: string | null };
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,10 +62,19 @@ export default function Nav({ profile }: { profile: { name: string; email: strin
           <div className="relative ml-2">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm flex items-center justify-center"
+              className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm flex items-center justify-center"
               aria-label="User menu"
             >
-              {profile.name?.[0]?.toUpperCase() ?? "?"}
+              {profile.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                profile.name?.[0]?.toUpperCase() ?? "?"
+              )}
             </button>
             {menuOpen && (
               <>
@@ -71,6 +84,13 @@ export default function Nav({ profile }: { profile: { name: string; email: strin
                     <p className="text-sm font-medium truncate">{profile.name}</p>
                     <p className="text-xs text-slate-500 truncate">{profile.email}</p>
                   </div>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md flex items-center gap-2"
+                  >
+                    <UserIcon className="w-4 h-4" /> Profile
+                  </Link>
                   <button
                     onClick={signOut}
                     className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-md flex items-center gap-2"
