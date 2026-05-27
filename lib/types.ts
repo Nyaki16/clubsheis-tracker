@@ -78,6 +78,10 @@ export type Task = {
     | "published"
     | "closed_out";
   priority_rank: 1 | 2 | 3 | null;
+  url: string | null;
+  sent_for_approval: boolean;
+  approver_id: string | null;
+  approved: boolean;
   created_at: string;
   updated_at: string;
 };

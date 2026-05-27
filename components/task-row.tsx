@@ -6,8 +6,10 @@ import {
   ArrowDown,
   ArrowUp,
   Calendar,
+  Check,
   ChevronDown,
   ChevronRight,
+  Link as LinkIcon,
   Star,
   UserCog,
   X,
@@ -24,6 +26,15 @@ import {
 
 export type SortKey = "client" | "task" | "due" | "status";
 export type SortDir = "asc" | "desc";
+
+// Short display string for a URL: "drive.google.com/…" → just the host.
+function prettyUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//, "").split("/")[0];
+  }
+}
 
 // Shared 12-column header for the Daily and Client task grids.
 // `onSort` is optional — pass undefined to render a static (non-sortable) header.
@@ -64,7 +75,7 @@ export function TaskGridHeader({
     );
 
   return (
-    <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
+    <div className="hidden md:grid grid-cols-16 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
       <ColButton k="client" span="col-span-2">
         Client
       </ColButton>
@@ -72,10 +83,12 @@ export function TaskGridHeader({
         Task
       </ColButton>
       <div className="col-span-2">Notes</div>
+      <div className="col-span-1">Link</div>
       <ColButton k="due" span="col-span-1">
         Due
       </ColButton>
       <div className="col-span-2">Assignee</div>
+      <div className="col-span-2">Approval</div>
       <ColButton k="status" span="col-span-2">
         Status
       </ColButton>
@@ -259,12 +272,17 @@ export function TaskGridRow({
   const [notesDraft, setNotesDraft] = useState(task.notes ?? "");
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [reassigning, setReassigning] = useState(false);
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [urlDraft, setUrlDraft] = useState(task.url ?? "");
+  const [pickingApprover, setPickingApprover] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
   const assigneeBtnRef = useRef<HTMLButtonElement>(null);
+  const approverBtnRef = useRef<HTMLButtonElement>(null);
   const justSavedRef = useRef(false);
 
   useEffect(() => setTitleDraft(task.title), [task.title]);
   useEffect(() => setNotesDraft(task.notes ?? ""), [task.notes]);
+  useEffect(() => setUrlDraft(task.url ?? ""), [task.url]);
 
   // After an inline edit, the parent re-fetches and may re-sort the row to a
   // new position. Pull the row back into view so it doesn't get lost.
@@ -275,7 +293,18 @@ export function TaskGridRow({
       rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
     return () => cancelAnimationFrame(id);
-  }, [task.title, task.notes, task.due_date, task.status, task.assignee_id, task.priority_rank]);
+  }, [
+    task.title,
+    task.notes,
+    task.due_date,
+    task.status,
+    task.assignee_id,
+    task.priority_rank,
+    task.url,
+    task.sent_for_approval,
+    task.approver_id,
+    task.approved,
+  ]);
 
   const status =
     TASK_STATUSES.find((s) => s.id === task.status) ?? TASK_STATUSES[0];
@@ -316,10 +345,49 @@ export function TaskGridRow({
     startTransition(() => updateTask(task.id, { assignee_id: assigneeId }));
   }
 
+  function saveUrl() {
+    const next = urlDraft.trim();
+    setEditingUrl(false);
+    if (next === (task.url ?? "")) return;
+    justSavedRef.current = true;
+    startTransition(() => updateTask(task.id, { url: next || null }));
+  }
+
+  function setApprover(approverId: string | null) {
+    setPickingApprover(false);
+    if (approverId === task.approver_id && task.sent_for_approval) return;
+    justSavedRef.current = true;
+    startTransition(() =>
+      updateTask(task.id, {
+        approver_id: approverId,
+        sent_for_approval: approverId !== null,
+      })
+    );
+  }
+
+  function clearApproval() {
+    if (!task.sent_for_approval && !task.approved && !task.approver_id) return;
+    justSavedRef.current = true;
+    startTransition(() =>
+      updateTask(task.id, {
+        sent_for_approval: false,
+        approver_id: null,
+        approved: false,
+      })
+    );
+  }
+
+  function toggleApproved() {
+    justSavedRef.current = true;
+    startTransition(() =>
+      updateTask(task.id, { approved: !task.approved })
+    );
+  }
+
   return (
     <div
       ref={rowRef}
-      className={`grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 group items-start ${
+      className={`grid grid-cols-1 md:grid-cols-16 gap-3 px-5 py-3 group items-start ${
         selected ? "bg-slate-100" : "hover:bg-slate-50"
       }`}
     >
@@ -424,6 +492,54 @@ export function TaskGridRow({
       </div>
 
       <div className="md:col-span-1 pt-1 min-w-0">
+        {editingUrl ? (
+          <input
+            autoFocus
+            type="url"
+            value={urlDraft}
+            onChange={(e) => setUrlDraft(e.target.value)}
+            onBlur={saveUrl}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveUrl();
+              if (e.key === "Escape") {
+                setUrlDraft(task.url ?? "");
+                setEditingUrl(false);
+              }
+            }}
+            placeholder="https://…"
+            className="w-full text-xs border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+          />
+        ) : task.url ? (
+          <div className="flex items-center gap-1 group/url">
+            <a
+              href={task.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1 truncate"
+              title={task.url}
+            >
+              <LinkIcon className="w-3 h-3 flex-shrink-0 text-slate-400" />
+              <span className="truncate">{prettyUrl(task.url)}</span>
+            </a>
+            <button
+              onClick={() => setEditingUrl(true)}
+              className="opacity-0 group-hover/url:opacity-100 text-[10px] text-slate-400 hover:text-slate-700 px-1"
+              aria-label="Edit URL"
+            >
+              edit
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingUrl(true)}
+            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+          >
+            + link
+          </button>
+        )}
+      </div>
+
+      <div className="md:col-span-1 pt-1 min-w-0">
         {editingDate ? (
           <input
             type="date"
@@ -479,6 +595,73 @@ export function TaskGridRow({
             profiles={profiles}
             onPick={reassign}
             onClose={() => setReassigning(false)}
+          />
+        )}
+      </div>
+
+      <div className="md:col-span-2 pt-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <button
+            ref={approverBtnRef}
+            onClick={() =>
+              task.sent_for_approval
+                ? clearApproval()
+                : setPickingApprover((v) => !v)
+            }
+            className={`flex items-center justify-center w-4 h-4 rounded border flex-shrink-0 ${
+              task.sent_for_approval
+                ? "bg-amber-500 border-amber-500 text-white"
+                : "border-slate-300 hover:border-slate-500 bg-white"
+            }`}
+            title={
+              task.sent_for_approval
+                ? "Sent — click to undo"
+                : "Send for approval"
+            }
+            aria-label="Send for approval"
+          >
+            {task.sent_for_approval && <Check className="w-3 h-3" strokeWidth={3} />}
+          </button>
+          <button
+            onClick={toggleApproved}
+            disabled={!task.sent_for_approval}
+            className={`flex items-center justify-center w-4 h-4 rounded border flex-shrink-0 ${
+              task.approved
+                ? "bg-emerald-500 border-emerald-500 text-white"
+                : task.sent_for_approval
+                ? "border-slate-300 hover:border-emerald-500 bg-white"
+                : "border-slate-200 bg-slate-50 cursor-not-allowed"
+            }`}
+            title={
+              !task.sent_for_approval
+                ? "Send for approval first"
+                : task.approved
+                ? "Approved — click to unapprove"
+                : "Mark as approved"
+            }
+            aria-label="Approved"
+          >
+            {task.approved && <Check className="w-3 h-3" strokeWidth={3} />}
+          </button>
+          {task.sent_for_approval && task.approver_id && (
+            <span
+              className="text-[10px] text-slate-500 truncate"
+              title={`To ${
+                profiles.find((p) => p.id === task.approver_id)?.name ?? "—"
+              }`}
+            >
+              →{" "}
+              {profiles.find((p) => p.id === task.approver_id)?.name ?? "—"}
+            </span>
+          )}
+        </div>
+        {pickingApprover && (
+          <ReassignPopover
+            triggerRef={approverBtnRef}
+            currentId={task.approver_id}
+            profiles={profiles}
+            onPick={setApprover}
+            onClose={() => setPickingApprover(false)}
           />
         )}
       </div>

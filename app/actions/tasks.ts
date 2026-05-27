@@ -10,6 +10,10 @@ export type TaskInput = {
   due_date: string | null;
   notes: string;
   status: TaskStatusId;
+  url?: string | null;
+  sent_for_approval?: boolean;
+  approver_id?: string | null;
+  approved?: boolean;
 };
 
 export async function createTask(jobId: string, input: TaskInput) {
@@ -21,6 +25,10 @@ export async function createTask(jobId: string, input: TaskInput) {
     due_date: input.due_date || null,
     notes: input.notes ?? "",
     status: input.status,
+    url: input.url ?? null,
+    sent_for_approval: input.sent_for_approval ?? false,
+    approver_id: input.approver_id ?? null,
+    approved: input.approved ?? false,
   });
   if (error) throw new Error(error.message);
 
@@ -38,6 +46,12 @@ export async function updateTask(id: string, updates: Partial<TaskInput>) {
   if (updates.due_date !== undefined) payload.due_date = updates.due_date || null;
   if (updates.notes !== undefined) payload.notes = updates.notes;
   if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.url !== undefined)
+    payload.url = updates.url && updates.url.trim() ? updates.url.trim() : null;
+  if (updates.sent_for_approval !== undefined)
+    payload.sent_for_approval = updates.sent_for_approval;
+  if (updates.approver_id !== undefined) payload.approver_id = updates.approver_id;
+  if (updates.approved !== undefined) payload.approved = updates.approved;
 
   const { error } = await supabase.from("tasks").update(payload).eq("id", id);
   if (error) throw new Error(error.message);
