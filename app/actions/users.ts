@@ -61,6 +61,69 @@ export async function updateMyPassword(newPassword: string): Promise<InviteResul
   return { ok: true, message: "Password updated." };
 }
 
+const AVATAR_BUCKET = "avatars";
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+// Upload avatar via the admin client so we don't need storage RLS policies
+// (Supabase's modern projects don't let postgres role manage policies on
+// storage.objects via SQL Editor — admin client bypasses them cleanly).
+export async function uploadMyAvatar(formData: FormData): Promise<InviteResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, message: "No file received." };
+  }
+  if (file.size === 0) return { ok: false, message: "File is empty." };
+  if (file.size > MAX_AVATAR_BYTES) {
+    return { ok: false, message: "File is bigger than 5 MB." };
+  }
+  if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
+    return { ok: false, message: "Only JPG, PNG, WebP, or GIF." };
+  }
+
+  const admin = createAdminClient();
+  const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error: upErr } = await admin.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, buffer, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: true,
+    });
+  if (upErr) return { ok: false, message: upErr.message };
+
+  const { data: pub } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+  const { error: updErr } = await admin
+    .from("profiles")
+    .update({ avatar_url: url })
+    .eq("id", user.id);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  revalidatePath("/profile");
+  revalidatePath("/team");
+  revalidatePath("/daily");
+  revalidatePath("/dashboard");
+  revalidatePath("/clients");
+
+  return { ok: true, message: url };
+}
+
 async function requireAdmin() {
   const supabase = await createClient();
   const {

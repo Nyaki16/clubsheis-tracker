@@ -3,9 +3,12 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
-import { updateMyPassword, updateMyProfile } from "@/app/actions/users";
+import {
+  updateMyPassword,
+  updateMyProfile,
+  uploadMyAvatar,
+} from "@/app/actions/users";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -53,27 +56,12 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
 
     setUploading(true);
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      // RLS requires the first folder segment to equal the user's UID.
-      const path = `${profile.id}/avatar-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: true,
-          contentType: file.type,
-        });
-      if (upErr) throw upErr;
-
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      // Cache-bust so the new image shows immediately.
-      const fresh = `${pub.publicUrl}?v=${Date.now()}`;
-
-      const res = await updateMyProfile({ avatar_url: fresh });
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await uploadMyAvatar(fd);
       if (!res.ok) throw new Error(res.message);
-
-      setAvatarUrl(fresh);
+      // Server returns the public URL in res.message on success.
+      setAvatarUrl(res.message);
       setAvatarMsg({ ok: true, text: "Photo updated." });
       router.refresh();
     } catch (e) {
