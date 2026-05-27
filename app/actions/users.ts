@@ -48,13 +48,90 @@ export async function inviteUser(name: string, email: string): Promise<InviteRes
     redirectTo: origin ? `${origin}/auth/callback?next=/welcome` : undefined,
   });
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("rate limit") || msg.includes("rate-limit")) {
+      return {
+        ok: false,
+        message:
+          "Supabase's built-in invite email is rate-limited (3/hour on the free tier). Use \"Generate invite link\" instead and DM it to them.",
+      };
+    }
+    return { ok: false, message: error.message };
+  }
 
   revalidatePath("/team");
   return {
     ok: true,
     message: `Invite sent to ${cleanEmail}. They'll get an email to set their password.`,
   };
+}
+
+// Email-free fallback: creates the auth user (or reuses an existing one) and
+// returns a one-time invite/recovery link the admin can copy + DM. Bypasses
+// the Supabase invite-email rate limit entirely.
+export type InviteLinkResult =
+  | { ok: true; link: string; email: string }
+  | { ok: false; message: string };
+
+export async function generateInviteLink(
+  name: string,
+  email: string
+): Promise<InviteLinkResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Forbidden." };
+  }
+
+  const cleanName = name.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanName) return { ok: false, message: "Name is required." };
+  if (!cleanEmail) return { ok: false, message: "Email is required." };
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${proto}://${host}` : "";
+  const redirectTo = origin ? `${origin}/auth/callback?next=/welcome` : undefined;
+
+  const admin = createAdminClient();
+
+  // Try invite-type link first (creates the user if new). If the user already
+  // exists Supabase returns an "already registered" error — fall back to a
+  // recovery link so they can set/reset their password.
+  let link: string | null = null;
+
+  const inviteRes = await admin.auth.admin.generateLink({
+    type: "invite",
+    email: cleanEmail,
+    options: { data: { name: cleanName }, redirectTo },
+  });
+
+  if (inviteRes.data?.properties?.action_link) {
+    link = inviteRes.data.properties.action_link;
+  } else if (inviteRes.error) {
+    const msg = inviteRes.error.message.toLowerCase();
+    const alreadyRegistered =
+      msg.includes("already") || msg.includes("registered");
+    if (!alreadyRegistered) {
+      return { ok: false, message: inviteRes.error.message };
+    }
+    const recoveryRes = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: cleanEmail,
+      options: { redirectTo },
+    });
+    if (recoveryRes.error) {
+      return { ok: false, message: recoveryRes.error.message };
+    }
+    link = recoveryRes.data?.properties?.action_link ?? null;
+  }
+
+  if (!link) return { ok: false, message: "Could not generate a link." };
+
+  revalidatePath("/team");
+  return { ok: true, link, email: cleanEmail };
 }
 
 export async function reinviteUser(profileId: string): Promise<InviteResult> {

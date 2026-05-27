@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowDown,
   ArrowUp,
@@ -143,28 +144,71 @@ export function PriorityStar({ task }: { task: Task }) {
 }
 
 function ReassignPopover({
+  triggerRef,
   currentId,
   profiles,
   onPick,
   onClose,
 }: {
+  triggerRef: React.RefObject<HTMLElement | null>;
   currentId: string | null;
   profiles: Profile[];
   onPick: (id: string | null) => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // Position the popover under the trigger, right-aligned. Recompute on
+  // scroll/resize so it tracks the page until closed.
+  useLayoutEffect(() => {
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const width = 176; // matches w-44
+      const left = Math.max(
+        8,
+        Math.min(window.innerWidth - width - 8, rect.right - width)
+      );
+      setPos({ top: rect.bottom + 4, left });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [triggerRef]);
+
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (popRef.current && popRef.current.contains(target)) return;
+      if (triggerRef.current && triggerRef.current.contains(target)) return;
+      onClose();
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, [onClose]);
-  return (
+  }, [onClose, triggerRef]);
+
+  if (!mounted || !pos) return null;
+
+  return createPortal(
     <div
-      ref={ref}
-      className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-lg shadow-lg w-44 py-1"
+      ref={popRef}
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        width: 176,
+        zIndex: 100,
+      }}
+      className="bg-white border border-slate-200 rounded-lg shadow-lg py-1"
     >
       <button
         onClick={() => onPick(null)}
@@ -185,7 +229,8 @@ function ReassignPopover({
           {p.name}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -214,9 +259,23 @@ export function TaskGridRow({
   const [notesDraft, setNotesDraft] = useState(task.notes ?? "");
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [reassigning, setReassigning] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const assigneeBtnRef = useRef<HTMLButtonElement>(null);
+  const justSavedRef = useRef(false);
 
   useEffect(() => setTitleDraft(task.title), [task.title]);
   useEffect(() => setNotesDraft(task.notes ?? ""), [task.notes]);
+
+  // After an inline edit, the parent re-fetches and may re-sort the row to a
+  // new position. Pull the row back into view so it doesn't get lost.
+  useEffect(() => {
+    if (!justSavedRef.current) return;
+    justSavedRef.current = false;
+    const id = requestAnimationFrame(() => {
+      rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [task.title, task.notes, task.due_date, task.status, task.assignee_id, task.priority_rank]);
 
   const status =
     TASK_STATUSES.find((s) => s.id === task.status) ?? TASK_STATUSES[0];
@@ -232,29 +291,34 @@ export function TaskGridRow({
       setTitleDraft(task.title);
       return;
     }
+    justSavedRef.current = true;
     startTransition(() => updateTask(task.id, { title: next }));
   }
 
   function saveNotes() {
     setEditingNotes(false);
     if (notesDraft === (task.notes ?? "")) return;
+    justSavedRef.current = true;
     startTransition(() => updateTask(task.id, { notes: notesDraft }));
   }
 
   function saveDate(value: string) {
     setEditingDate(false);
     if (value === (task.due_date ?? "")) return;
+    justSavedRef.current = true;
     startTransition(() => updateTask(task.id, { due_date: value }));
   }
 
   function reassign(assigneeId: string | null) {
     setReassigning(false);
     if (assigneeId === task.assignee_id) return;
+    justSavedRef.current = true;
     startTransition(() => updateTask(task.id, { assignee_id: assigneeId }));
   }
 
   return (
     <div
+      ref={rowRef}
       className={`grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 group items-start ${
         selected ? "bg-slate-100" : "hover:bg-slate-50"
       }`}
@@ -392,8 +456,9 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 pt-1 relative min-w-0">
+      <div className="md:col-span-2 pt-1 min-w-0">
         <button
+          ref={assigneeBtnRef}
           onClick={() => setReassigning((v) => !v)}
           className={`text-sm flex items-center gap-1.5 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full text-left min-w-0 ${
             task.assignee_id ? "text-slate-700" : "text-slate-400"
@@ -409,6 +474,7 @@ export function TaskGridRow({
         </button>
         {reassigning && (
           <ReassignPopover
+            triggerRef={assigneeBtnRef}
             currentId={task.assignee_id}
             profiles={profiles}
             onPick={reassign}
@@ -420,11 +486,12 @@ export function TaskGridRow({
       <div className="md:col-span-2 flex items-center gap-1 pt-0.5">
         <select
           value={task.status}
-          onChange={(e) =>
+          onChange={(e) => {
+            justSavedRef.current = true;
             startTransition(() =>
               updateTaskStatus(task.id, e.target.value as TaskStatusId)
-            )
-          }
+            );
+          }}
           className={`text-xs font-medium border rounded-md px-2 py-1 flex-1 min-w-0 ${status.color}`}
         >
           {TASK_STATUSES.map((s) => (

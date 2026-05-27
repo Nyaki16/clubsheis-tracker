@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus } from "lucide-react";
+import { Copy, Plus } from "lucide-react";
 import Modal from "@/components/modal";
-import { inviteUser } from "@/app/actions/users";
+import { generateInviteLink, inviteUser } from "@/app/actions/users";
 
 export default function InviteButton() {
   const [open, setOpen] = useState(false);
@@ -30,11 +30,14 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [link, setLink] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  function submit() {
+  function submitEmail() {
     if (!name.trim() || !email.trim()) return;
     setError("");
     setSuccess("");
+    setLink("");
     startTransition(async () => {
       const res = await inviteUser(name, email);
       if (res.ok) {
@@ -46,6 +49,34 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         setError(res.message);
       }
     });
+  }
+
+  function submitLink() {
+    if (!name.trim() || !email.trim()) return;
+    setError("");
+    setSuccess("");
+    setLink("");
+    setCopied(false);
+    startTransition(async () => {
+      const res = await generateInviteLink(name, email);
+      if (res.ok) {
+        setLink(res.link);
+        setSuccess(
+          `Link generated for ${res.email}. Copy it and DM it to them.`
+        );
+      } else {
+        setError(res.message);
+      }
+    });
+  }
+
+  async function copyLink() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
   }
 
   return (
@@ -65,19 +96,60 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="they@example.com"
         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
-        onKeyDown={(e) => e.key === "Enter" && submit()}
+        onKeyDown={(e) => e.key === "Enter" && submitEmail()}
       />
       <button
-        onClick={submit}
+        onClick={submitEmail}
         disabled={pending || !name.trim() || !email.trim()}
         className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
       >
-        {pending ? "Sending invite…" : "Send invite"}
+        {pending ? "Working…" : "Send invite email"}
       </button>
+      <div className="flex items-center gap-2 my-3 text-xs text-slate-400">
+        <div className="flex-1 h-px bg-slate-200" />
+        or
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+      <button
+        onClick={submitLink}
+        disabled={pending || !name.trim() || !email.trim()}
+        className="w-full bg-white border border-slate-200 text-slate-700 py-2 rounded-lg font-medium text-sm hover:bg-slate-50 disabled:opacity-60"
+      >
+        {pending ? "Working…" : "Generate invite link (no email)"}
+      </button>
+
+      {link && (
+        <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+          <div className="text-xs font-medium text-slate-600 mb-1.5">
+            One-time invite link
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={link}
+              className="flex-1 text-xs border border-slate-200 rounded px-2 py-1 bg-white font-mono truncate"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <button
+              onClick={copyLink}
+              className="flex items-center gap-1 text-xs bg-slate-900 text-white px-2 py-1.5 rounded hover:bg-slate-800"
+            >
+              <Copy className="w-3 h-3" />
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            DM this to them. It logs them in and lets them set a password.
+          </p>
+        </div>
+      )}
+
       {error && <p className="text-sm text-rose-600 mt-3">{error}</p>}
-      {success && <p className="text-sm text-emerald-600 mt-3">{success}</p>}
+      {success && !link && (
+        <p className="text-sm text-emerald-600 mt-3">{success}</p>
+      )}
       <p className="text-xs text-slate-400 mt-3">
-        They&apos;ll get an email with a link to set their password.
+        They&apos;ll set their own password from the email or link.
       </p>
     </div>
   );
