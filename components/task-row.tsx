@@ -14,6 +14,7 @@ import {
   UserCog,
   X,
 } from "lucide-react";
+import Avatar from "@/components/avatar";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate, isOverdue } from "@/lib/utils";
@@ -235,11 +236,12 @@ function ReassignPopover({
         <button
           key={p.id}
           onClick={() => onPick(p.id)}
-          className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 ${
+          className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 ${
             currentId === p.id ? "font-semibold text-slate-900" : "text-slate-600"
           }`}
         >
-          {p.name}
+          <Avatar name={p.name} url={p.avatar_url} size="sm" />
+          <span className="truncate">{p.name}</span>
         </button>
       ))}
     </div>,
@@ -581,7 +583,16 @@ export function TaskGridRow({
           }`}
           title="Click to reassign"
         >
-          <UserCog className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+          {(() => {
+            const a = task.assignee_id
+              ? profiles.find((p) => p.id === task.assignee_id) ?? null
+              : null;
+            return a ? (
+              <Avatar name={a.name} url={a.avatar_url} size="sm" />
+            ) : (
+              <UserCog className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+            );
+          })()}
           <span className="truncate">
             {task.assignee_id
               ? profiles.find((p) => p.id === task.assignee_id)?.name ?? "Unknown"

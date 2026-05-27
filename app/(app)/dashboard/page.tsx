@@ -2,6 +2,7 @@ import { AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { TASK_STATUSES } from "@/lib/constants";
 import type { Client, Deliverable, Job, Profile, Task } from "@/lib/types";
+import Avatar from "@/components/avatar";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -111,9 +112,7 @@ export default async function DashboardPage() {
                     className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold">
-                        {p.name[0]?.toUpperCase()}
-                      </div>
+                      <Avatar name={p.name} url={p.avatar_url} size="md" />
                       <span className="text-sm">{p.name}</span>
                     </div>
                     <span className="font-semibold">{count}</span>

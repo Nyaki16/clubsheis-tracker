@@ -11,6 +11,7 @@ import {
   type SortKey,
 } from "@/components/task-row";
 import BulkActionBar from "@/components/bulk-action-bar";
+import Avatar from "@/components/avatar";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { isOverdue, isThisWeek, isToday } from "@/lib/utils";
@@ -24,6 +25,7 @@ type Group = {
   label: string;
   avatarText: string;
   avatarBg: string;
+  avatarUrl?: string | null;
   dotColor?: string;
   groupAssigneeId: string | null;
   groupClientId: string | null;
@@ -231,6 +233,7 @@ export default function DailyClient({
         avatarBg: p
           ? "bg-gradient-to-br from-purple-500 to-pink-500"
           : "bg-slate-400",
+        avatarUrl: p?.avatar_url ?? null,
         groupAssigneeId: key === "__unassigned__" ? null : key,
         groupClientId: null,
         list,
@@ -442,7 +445,9 @@ export default function DailyClient({
                   ) : (
                     <ChevronDown className="w-4 h-4 text-slate-400 group-hover/header:text-slate-700" />
                   )}
-                  {g.dotColor ? (
+                  {g.avatarUrl ? (
+                    <Avatar name={g.label} url={g.avatarUrl} size="md" />
+                  ) : g.dotColor ? (
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                       style={{ backgroundColor: g.dotColor }}

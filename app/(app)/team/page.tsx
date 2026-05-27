@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TASK_STATUSES } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import Avatar from "@/components/avatar";
 import InviteButton from "./invite-button";
 import MemberActions from "./member-actions";
 
@@ -55,9 +56,7 @@ export default async function TeamPage() {
           return (
             <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                  {p.name[0]?.toUpperCase()}
-                </div>
+                <Avatar name={p.name} url={p.avatar_url} size="lg" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{p.name}</h3>
