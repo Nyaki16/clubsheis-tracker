@@ -20,7 +20,7 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-2xl">
       <h2 className="text-2xl font-bold mb-1">Your profile</h2>
-      <p className="text-slate-500 text-sm mb-6">
+      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
         Update your name, picture, and password.
       </p>
       <ProfileForm profile={profile as Profile} />

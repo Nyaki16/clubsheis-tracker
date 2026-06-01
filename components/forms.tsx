@@ -24,7 +24,7 @@ export function ClientForm({ onSubmit }: { onSubmit: (name: string) => Promise<v
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. Palesa Dooms"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         onKeyDown={(e) => e.key === "Enter" && submit()}
       />
       <button
@@ -87,7 +87,7 @@ export function JobForm({
             autoFocus
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             <option value="">Select a client…</option>
             {clients!.map((c) => (
@@ -103,7 +103,7 @@ export function JobForm({
       <select
         value={templateId}
         onChange={(e) => pickTemplate(e.target.value)}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       >
         <option value="">No template (blank job)</option>
         {JOB_TEMPLATES.map((t) => (
@@ -113,7 +113,7 @@ export function JobForm({
         ))}
       </select>
       {selectedTemplate ? (
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           Will create {selectedTemplate.tasks.length} starter tasks · {selectedTemplate.description}
         </p>
       ) : (
@@ -126,14 +126,14 @@ export function JobForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. November Studio Day"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
       <label className="text-sm font-medium block mb-1.5">Due date (optional)</label>
       <input
         type="date"
         value={dueDate}
         onChange={(e) => setDueDate(e.target.value)}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
       <button
         onClick={submit}
@@ -227,7 +227,7 @@ export function TaskForm({
               setClientId(e.target.value);
               setJobId("");
             }}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             <option value="">Select a client…</option>
             {(clients ?? []).map((c) => (
@@ -242,7 +242,7 @@ export function TaskForm({
               <select
                 value={jobId}
                 onChange={(e) => setJobId(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
               >
                 <option value="">Select a job…</option>
                 {filteredJobs.map((j) => (
@@ -262,7 +262,7 @@ export function TaskForm({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="e.g. Write script for Reel 1"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
 
       <div className="grid grid-cols-2 gap-3 mb-3">
@@ -271,7 +271,7 @@ export function TaskForm({
           <select
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             <option value="">Unassigned</option>
             {profiles.map((p) => (
@@ -286,7 +286,7 @@ export function TaskForm({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as TaskStatusId)}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             {TASK_STATUSES.map((s) => (
               <option key={s.id} value={s.id}>
@@ -302,7 +302,7 @@ export function TaskForm({
         type="date"
         value={dueDate ?? ""}
         onChange={(e) => setDueDate(e.target.value)}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
 
       <label className="text-sm font-medium block mb-1.5">Notes (optional)</label>
@@ -311,7 +311,7 @@ export function TaskForm({
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Context, links, blockers…"
         rows={3}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 resize-none"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300 resize-none"
       />
 
       <label className="text-sm font-medium block mb-1.5">Link (optional)</label>
@@ -320,10 +320,10 @@ export function TaskForm({
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://docs.google.com/…"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
 
-      <div className="border-t border-slate-100 pt-3 mb-4">
+      <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mb-4">
         <label className="text-sm font-medium block mb-2">Approval</label>
         <label className="flex items-center gap-2 mb-2 cursor-pointer">
           <input
@@ -342,7 +342,7 @@ export function TaskForm({
             <select
               value={approverId}
               onChange={(e) => setApproverId(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-slate-900"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
             >
               <option value="">Pick the approver…</option>
               {profiles.map((p) => (
@@ -361,7 +361,7 @@ export function TaskForm({
               />
               <span
                 className={`text-sm ${
-                  approverId ? "" : "text-slate-400"
+                  approverId ? "" : "text-slate-400 dark:text-slate-500"
                 }`}
               >
                 Approved
@@ -405,7 +405,7 @@ export function DeliverableForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. 4 IG Reels — Batch 1"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         onKeyDown={(e) => e.key === "Enter" && submit()}
       />
       <button
@@ -495,7 +495,7 @@ export function ClientProfileForm({
   }
 
   const input =
-    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900";
+    "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300";
 
   return (
     <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
@@ -533,7 +533,7 @@ export function ClientProfileForm({
           <img
             src={form.profile_pic_url}
             alt="Profile preview"
-            className="mt-2 w-16 h-16 rounded-full object-cover border border-slate-200"
+            className="mt-2 w-16 h-16 rounded-full object-cover border border-slate-200 dark:border-slate-700"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
@@ -568,11 +568,11 @@ export function ClientProfileForm({
         ))}
       </div>
 
-      <div className="pt-4 border-t border-slate-100">
-        <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-1">
+      <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium mb-1">
           Strategy doc overrides
         </div>
-        <p className="text-xs text-slate-400 mb-3">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
           Leave blank to use the URL auto-pulled from the client-flow app. Fill
           in to override (e.g. if names don&apos;t match exactly).
         </p>

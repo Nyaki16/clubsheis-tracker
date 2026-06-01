@@ -15,19 +15,19 @@ export default async function WelcomePage() {
     "there";
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-sm w-full">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center px-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 max-w-sm w-full">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
             CS
           </div>
           <div>
             <h1 className="font-bold leading-tight">ClubSheIs</h1>
-            <p className="text-sm text-slate-500">Production Tracker</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Production Tracker</p>
           </div>
         </div>
         <h2 className="text-xl font-bold mb-1">Welcome, {name}.</h2>
-        <p className="text-sm text-slate-500 mb-5">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
           Set a password to finish signing up.
         </p>
         <WelcomeForm />

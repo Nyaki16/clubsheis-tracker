@@ -296,33 +296,33 @@ export default function DailyClient({
       <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold mb-1">Daily Scroll</h2>
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
             Every task, grouped how you need it. Edit anything inline.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowNewJob(true)}
-            className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-50"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <Plus className="w-4 h-4" /> New job
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6">
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search title, notes, client, job…"
-            className="w-full border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -330,16 +330,16 @@ export default function DailyClient({
           )}
         </div>
         <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-600">Filters</span>
+          <Filter className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+          <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Filters</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Assignee</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Assignee</label>
             <select
               value={filterAssignee}
               onChange={(e) => setFilterAssignee(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm"
             >
               <option value="all">Everyone</option>
               {profiles.map((p) => (
@@ -351,11 +351,11 @@ export default function DailyClient({
             </select>
           </div>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Client</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Client</label>
             <select
               value={filterClient}
               onChange={(e) => setFilterClient(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm"
             >
               <option value="all">All clients</option>
               {clients.map((c) => (
@@ -366,11 +366,11 @@ export default function DailyClient({
             </select>
           </div>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Status</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm"
             >
               <option value="all">All statuses</option>
               {TASK_STATUSES.map((s) => (
@@ -381,11 +381,11 @@ export default function DailyClient({
             </select>
           </div>
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Due</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Due</label>
             <select
               value={filterDue}
               onChange={(e) => setFilterDue(e.target.value)}
-              className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm"
             >
               <option value="all">Anytime</option>
               <option value="overdue">Overdue</option>
@@ -395,7 +395,7 @@ export default function DailyClient({
             </select>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={hideClosed}
@@ -408,16 +408,16 @@ export default function DailyClient({
         </div>
         <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-500">Group by</span>
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Group by</span>
+            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-0.5">
               {(["assignee", "client", "none"] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setGroupBy(g)}
                   className={`text-xs px-2.5 py-1 rounded-md font-medium capitalize ${
                     groupBy === g
-                      ? "bg-white shadow-sm text-slate-900"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-slate-100"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                 >
                   {g === "none" ? "None" : g}
@@ -431,7 +431,7 @@ export default function DailyClient({
               className={`text-xs px-2.5 py-1 rounded-md font-medium flex items-center gap-1 border ${
                 filterPriority === "top3"
                   ? "bg-amber-100 border-amber-300 text-amber-800"
-                  : "bg-white border-slate-200 text-slate-500 hover:text-slate-700"
+                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               }`}
               title="Show only Top 3 priorities"
             >
@@ -443,9 +443,9 @@ export default function DailyClient({
               Top 3 only
             </button>
           </div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             Showing{" "}
-            <strong className="text-slate-900">{filteredTasks.length}</strong>{" "}
+            <strong className="text-slate-900 dark:text-slate-100">{filteredTasks.length}</strong>{" "}
             {filteredTasks.length === 1 ? "task" : "tasks"}
           </div>
         </div>
@@ -460,9 +460,9 @@ export default function DailyClient({
           return (
           <div
             key={g.key}
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
           >
-            <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -482,9 +482,9 @@ export default function DailyClient({
                   aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${g.label}`}
                 >
                   {isCollapsed ? (
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover/header:text-slate-700" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover/header:text-slate-700" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400 group-hover/header:text-slate-700" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover/header:text-slate-700" />
                   )}
                   {g.avatarUrl ? (
                     <Avatar name={g.label} url={g.avatarUrl} size="md" />
@@ -505,7 +505,7 @@ export default function DailyClient({
                   <h3 className="font-semibold">{g.label}</h3>
                 </button>
               </div>
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                 {g.list.length} {g.list.length === 1 ? "task" : "tasks"}
               </span>
             </div>
@@ -528,7 +528,7 @@ export default function DailyClient({
                   />
                 ))}
                 {g.list.length === 0 && (
-                  <div className="px-5 py-3 text-xs text-slate-400 italic">
+                  <div className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500 italic">
                     No tasks yet — add one below.
                   </div>
                 )}
@@ -544,8 +544,8 @@ export default function DailyClient({
           );
         })}
         {filteredTasks.length === 0 && groups.every((g) => g.list.length === 0) && (
-          <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
-            <p className="text-slate-500 text-sm">No tasks match these filters.</p>
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">No tasks match these filters.</p>
           </div>
         )}
       </div>
@@ -622,7 +622,7 @@ function NewTaskRow({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50/50 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-2.5 bg-slate-50 dark:bg-slate-800/40/50 items-center">
       <div className="md:col-span-2">
         <select
           value={clientId}
@@ -630,7 +630,7 @@ function NewTaskRow({
             setClientId(e.target.value);
             setJobId("");
           }}
-          className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+          className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 bg-white dark:bg-slate-900"
         >
           <option value="">Client…</option>
           {clients.map((c) => (
@@ -648,13 +648,13 @@ function NewTaskRow({
             if (e.key === "Enter" && canSubmit) submit();
           }}
           placeholder="Add a task…"
-          className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900 min-w-0"
+          className="flex-1 text-sm border border-slate-200 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-900 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300 min-w-0"
         />
         <select
           value={jobId}
           onChange={(e) => setJobId(e.target.value)}
           disabled={!clientId}
-          className="text-xs border border-slate-200 rounded px-1.5 py-1 bg-white max-w-[120px]"
+          className="text-xs border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 bg-white dark:bg-slate-900 max-w-[120px]"
         >
           <option value="">{clientId ? "Job…" : "Pick client"}</option>
           {filteredJobs.map((j) => (
@@ -672,7 +672,7 @@ function NewTaskRow({
             if (e.key === "Enter" && canSubmit) submit();
           }}
           placeholder="Notes (optional)"
-          className="w-full text-xs border border-slate-200 rounded px-2 py-1 bg-white focus:outline-none focus:border-slate-900"
+          className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-900 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         />
       </div>
       <div className="md:col-span-2">
@@ -680,14 +680,14 @@ function NewTaskRow({
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white"
+          className="w-full text-xs border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 bg-white dark:bg-slate-900"
         />
       </div>
       <div className="md:col-span-2 flex items-center gap-1">
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as TaskStatusId)}
-          className="flex-1 text-xs border border-slate-200 rounded px-1.5 py-1 bg-white min-w-0"
+          className="flex-1 text-xs border border-slate-200 dark:border-slate-700 rounded px-1.5 py-1 bg-white dark:bg-slate-900 min-w-0"
         >
           {TASK_STATUSES.map((s) => (
             <option key={s.id} value={s.id}>

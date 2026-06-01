@@ -55,7 +55,7 @@ export default function ProgressDonut({
           />
         )}
       </svg>
-      <span className="relative text-[10px] font-semibold text-slate-700 leading-none">
+      <span className="relative text-[10px] font-semibold text-slate-700 dark:text-slate-300 leading-none">
         {safe}
       </span>
     </div>

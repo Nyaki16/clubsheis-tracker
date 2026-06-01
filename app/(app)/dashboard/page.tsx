@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-1">Overview</h2>
-        <p className="text-slate-500 text-sm">What&apos;s moving, what&apos;s stuck, what needs you.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">What&apos;s moving, what&apos;s stuck, what needs you.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -79,7 +79,7 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="font-semibold mb-4">Tasks by status</h3>
           <div className="space-y-2">
             {TASK_STATUSES.map((s) => {
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
               return (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
+                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${s.dot}`} />
@@ -99,11 +99,11 @@ export default async function DashboardPage() {
             })}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
           <h3 className="font-semibold mb-4">Team workload</h3>
           <div className="space-y-2">
             {profiles.length === 0 ? (
-              <p className="text-sm text-slate-400 italic">No team members yet.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">No team members yet.</p>
             ) : (
               <>
                 {profiles.map((p) => {
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
                   return (
                     <div
                       key={p.id}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                     >
                       <div className="flex items-center gap-3">
                         <Avatar name={p.name} url={p.avatar_url} size="md" />
@@ -136,17 +136,17 @@ export default async function DashboardPage() {
                   return (
                     <Link
                       href="/daily?assignee=unassigned"
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 border-t border-slate-100 pt-3 mt-1"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-800 pt-3 mt-1"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-sm font-semibold flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm font-semibold flex-shrink-0">
                           ?
                         </div>
-                        <span className="text-sm text-slate-600">Unassigned</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-300">Unassigned</span>
                       </div>
                       <span
                         className={`font-semibold ${
-                          unassignedCount > 0 ? "text-rose-600" : "text-slate-400"
+                          unassignedCount > 0 ? "text-rose-600" : "text-slate-400 dark:text-slate-500"
                         }`}
                       >
                         {unassignedCount}
@@ -177,20 +177,20 @@ function Stat({
   const body = (
     <>
       <div className={`text-3xl font-bold ${valueClass ?? ""}`}>{value}</div>
-      <div className="text-sm text-slate-500 mt-1">{label}</div>
+      <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</div>
     </>
   );
   if (href) {
     return (
       <Link
         href={href}
-        className="bg-white rounded-xl border border-slate-200 p-5 hover:border-slate-400 hover:shadow-sm transition block"
+        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-sm transition block"
       >
         {body}
       </Link>
     );
   }
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">{body}</div>
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">{body}</div>
   );
 }

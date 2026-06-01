@@ -110,12 +110,12 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   const input =
-    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900";
+    "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300";
 
   return (
     <div className="space-y-8">
       {/* Avatar */}
-      <section className="bg-white rounded-xl border border-slate-200 p-5">
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="font-semibold mb-3">Profile picture</h3>
         <div className="flex items-center gap-4">
           {avatarUrl ? (
@@ -123,7 +123,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
             <img
               src={avatarUrl}
               alt={profile.name}
-              className="w-20 h-20 rounded-full object-cover border border-slate-200"
+              className="w-20 h-20 rounded-full object-cover border border-slate-200 dark:border-slate-700"
             />
           ) : (
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-xl flex items-center justify-center">
@@ -158,14 +158,14 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
               <button
                 onClick={removeAvatar}
                 disabled={uploading}
-                className="text-xs text-slate-500 hover:text-rose-600 flex items-center gap-1.5 disabled:opacity-60"
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 flex items-center gap-1.5 disabled:opacity-60"
               >
                 <Trash2 className="w-3 h-3" /> Remove
               </button>
             )}
           </div>
         </div>
-        <p className="text-xs text-slate-400 mt-3">JPG or PNG, up to 5 MB.</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">JPG or PNG, up to 5 MB.</p>
         {avatarMsg && (
           <p
             className={`text-sm mt-3 ${
@@ -178,7 +178,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       </section>
 
       {/* Name */}
-      <section className="bg-white rounded-xl border border-slate-200 p-5">
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="font-semibold mb-3">Name</h3>
         <label className="text-sm font-medium block mb-1.5">Display name</label>
         <input
@@ -187,8 +187,8 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           className={input + " mb-3"}
         />
         <label className="text-sm font-medium block mb-1.5">Email</label>
-        <input value={profile.email} disabled className={input + " bg-slate-50"} />
-        <p className="text-xs text-slate-400 mt-1.5 mb-4">
+        <input value={profile.email} disabled className={input + " bg-slate-50 dark:bg-slate-800/40"} />
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 mb-4">
           Email can&apos;t be changed here — ask an admin if you need to update it.
         </p>
         <button
@@ -210,9 +210,9 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       </section>
 
       {/* Password */}
-      <section className="bg-white rounded-xl border border-slate-200 p-5">
+      <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="font-semibold mb-1">Password</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
           Set a new password. You don&apos;t need to enter the old one — your
           current session is the proof.
         </p>

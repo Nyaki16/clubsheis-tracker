@@ -128,7 +128,7 @@ export default function ClientsList({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold mb-1">Clients</h2>
-          <p className="text-slate-500 text-sm">Click a client to see their jobs.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Click a client to see their jobs.</p>
         </div>
         <button
           onClick={() => setShowNew(true)}
@@ -138,19 +138,19 @@ export default function ClientsList({
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or business…"
-            className="w-full border border-slate-200 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -158,11 +158,11 @@ export default function ClientsList({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500 whitespace-nowrap">Filter</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Filter</label>
           <select
             value={activity}
             onChange={(e) => setActivity(e.target.value as Activity)}
-            className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-slate-900"
+            className="border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             {(Object.keys(ACTIVITY_LABELS) as Activity[]).map((k) => (
               <option key={k} value={k}>
@@ -172,11 +172,11 @@ export default function ClientsList({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500 whitespace-nowrap">Sort by</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">Sort by</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-slate-900"
+            className="border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           >
             {(Object.keys(SORT_LABELS) as SortBy[]).map((k) => (
               <option key={k} value={k}>
@@ -185,13 +185,13 @@ export default function ClientsList({
             ))}
           </select>
         </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+        <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-0.5">
           <button
             onClick={() => setView("grid")}
             className={`text-xs px-2.5 py-1.5 rounded-md font-medium flex items-center gap-1.5 ${
               view === "grid"
-                ? "bg-white shadow-sm text-slate-900"
-                : "text-slate-500 hover:text-slate-700"
+                ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-slate-100"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
             aria-label="Grid view"
           >
@@ -202,8 +202,8 @@ export default function ClientsList({
             onClick={() => setView("list")}
             className={`text-xs px-2.5 py-1.5 rounded-md font-medium flex items-center gap-1.5 ${
               view === "list"
-                ? "bg-white shadow-sm text-slate-900"
-                : "text-slate-500 hover:text-slate-700"
+                ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-slate-100"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
             aria-label="List view"
           >
@@ -211,20 +211,20 @@ export default function ClientsList({
             <span>List</span>
           </button>
         </div>
-        <div className="text-xs text-slate-500 sm:ml-auto whitespace-nowrap">
-          <strong className="text-slate-900">{visibleClients.length}</strong>
+        <div className="text-xs text-slate-500 dark:text-slate-400 sm:ml-auto whitespace-nowrap">
+          <strong className="text-slate-900 dark:text-slate-100">{visibleClients.length}</strong>
           {visibleClients.length !== clients.length && ` of ${clients.length}`}
         </div>
       </div>
 
       {clients.length === 0 && (
-        <div className="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
-          <p className="text-slate-500 text-sm">No clients yet. Add one to get started.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">No clients yet. Add one to get started.</p>
         </div>
       )}
       {clients.length > 0 && visibleClients.length === 0 && (
-        <div className="bg-white rounded-xl border border-dashed border-slate-300 p-8 text-center">
-          <p className="text-slate-500 text-sm">No clients match these filters.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+          <p className="text-slate-500 dark:text-slate-400 text-sm">No clients match these filters.</p>
         </div>
       )}
 
@@ -239,7 +239,7 @@ export default function ClientsList({
               <Link
                 key={client.id}
                 href={`/clients/${client.id}`}
-                className="bg-white rounded-xl border border-slate-200 p-5 hover:border-slate-400 hover:shadow-sm transition group"
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-sm transition group"
               >
                 <div className="flex items-start justify-between mb-3">
                   <ClientAvatar client={client} />
@@ -250,7 +250,7 @@ export default function ClientsList({
                         e.stopPropagation();
                         setEditing(client);
                       }}
-                      className="text-slate-400 hover:text-slate-900 p-1"
+                      className="text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white p-1"
                       aria-label={`Edit ${client.name}`}
                     >
                       <Pencil className="w-4 h-4" />
@@ -263,7 +263,7 @@ export default function ClientsList({
                           startTransition(() => deleteClient(client.id));
                         }
                       }}
-                      className="text-slate-400 hover:text-rose-600 p-1"
+                      className="text-slate-400 dark:text-slate-500 hover:text-rose-600 p-1"
                       aria-label={`Delete ${client.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -272,9 +272,9 @@ export default function ClientsList({
                 </div>
                 <h3 className="font-semibold mb-0.5">{client.name}</h3>
                 {client.business_name && (
-                  <p className="text-xs text-slate-500 mb-1">{client.business_name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{client.business_name}</p>
                 )}
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {activeJobs} active {activeJobs === 1 ? "job" : "jobs"} ·{" "}
                   {clientJobs.length} total
                 </p>
@@ -285,8 +285,8 @@ export default function ClientsList({
       )}
 
       {view === "list" && visibleClients.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium bg-slate-50 dark:bg-slate-800/40/50">
             <div className="col-span-4">Client</div>
             <div className="col-span-4">Business</div>
             <div className="col-span-2">Active</div>
@@ -301,7 +301,7 @@ export default function ClientsList({
               return (
                 <div
                   key={client.id}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 hover:bg-slate-50 group items-center"
+                  className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 group items-center"
                 >
                   <Link
                     href={`/clients/${client.id}`}
@@ -310,20 +310,20 @@ export default function ClientsList({
                     <ClientAvatar client={client} />
                     <span className="font-semibold truncate">{client.name}</span>
                   </Link>
-                  <div className="md:col-span-4 text-sm text-slate-600 truncate">
+                  <div className="md:col-span-4 text-sm text-slate-600 dark:text-slate-300 truncate">
                     {client.business_name ?? (
-                      <span className="text-slate-400 italic">—</span>
+                      <span className="text-slate-400 dark:text-slate-500 italic">—</span>
                     )}
                   </div>
-                  <div className="md:col-span-2 text-sm text-slate-600">
+                  <div className="md:col-span-2 text-sm text-slate-600 dark:text-slate-300">
                     {activeJobs}
                   </div>
                   <div className="md:col-span-2 flex items-center justify-between gap-2">
-                    <span className="text-sm text-slate-600">{clientJobs.length}</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{clientJobs.length}</span>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                       <button
                         onClick={() => setEditing(client)}
-                        className="text-slate-400 hover:text-slate-900 p-1"
+                        className="text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white p-1"
                         aria-label={`Edit ${client.name}`}
                       >
                         <Pencil className="w-4 h-4" />
@@ -336,7 +336,7 @@ export default function ClientsList({
                             startTransition(() => deleteClient(client.id));
                           }
                         }}
-                        className="text-slate-400 hover:text-rose-600 p-1"
+                        className="text-slate-400 dark:text-slate-500 hover:text-rose-600 p-1"
                         aria-label={`Delete ${client.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -384,7 +384,7 @@ function ClientAvatar({ client }: { client: Client }) {
       <img
         src={client.profile_pic_url}
         alt={client.name}
-        className="w-10 h-10 rounded-lg object-cover border border-slate-200"
+        className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700"
         onError={() => setFailed(true)}
       />
     );

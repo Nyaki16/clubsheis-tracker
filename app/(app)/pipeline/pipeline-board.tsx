@@ -54,7 +54,7 @@ export default function PipelineBoard({
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-1">Pipeline</h2>
-        <p className="text-slate-500 text-sm">
+        <p className="text-slate-500 dark:text-slate-400 text-sm">
           Tasks across all clients, by status. Drag a card to move it.
         </p>
       </div>
@@ -86,8 +86,8 @@ export default function PipelineBoard({
                 if (!t || t.status === status.id) return;
                 moveTask(taskId, status.id);
               }}
-              className={`bg-white rounded-xl border p-3 transition-colors ${
-                isHover ? "border-slate-900 bg-slate-50" : "border-slate-200"
+              className={`bg-white dark:bg-slate-900 rounded-xl border p-3 transition-colors ${
+                isHover ? "border-slate-900 bg-slate-50 dark:bg-slate-800/40" : "border-slate-200 dark:border-slate-700"
               }`}
             >
               <div className="flex items-center justify-between mb-3">
@@ -96,7 +96,7 @@ export default function PipelineBoard({
                 >
                   {status.label}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {colTasks.length}
                 </span>
               </div>
@@ -127,10 +127,10 @@ export default function PipelineBoard({
                         if (target.closest("a")) return;
                         setEditing(task);
                       }}
-                      className={`p-2 rounded border bg-white cursor-pointer select-none ${
+                      className={`p-2 rounded border bg-white dark:bg-slate-900 cursor-pointer select-none ${
                         isDragging
                           ? "border-slate-400 opacity-50"
-                          : "border-slate-200 hover:border-slate-400"
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500"
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
@@ -140,7 +140,7 @@ export default function PipelineBoard({
                             style={{ backgroundColor: client.color }}
                           />
                         )}
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                           {client?.name ?? "—"}
                         </p>
                       </div>
@@ -150,7 +150,7 @@ export default function PipelineBoard({
                       {job && (
                         <Link
                           href={`/clients/${job.client_id}/jobs/${job.id}`}
-                          className="text-[11px] text-slate-400 hover:text-slate-700 truncate inline-block max-w-full"
+                          className="text-[11px] text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 truncate inline-block max-w-full"
                           onClick={(e) => e.stopPropagation()}
                           draggable={false}
                         >
@@ -161,7 +161,7 @@ export default function PipelineBoard({
                   );
                 })}
                 {colTasks.length === 0 && (
-                  <p className="text-xs text-slate-400 italic px-1">Empty</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 italic px-1">Empty</p>
                 )}
               </div>
             </div>

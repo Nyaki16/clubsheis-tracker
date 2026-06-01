@@ -87,7 +87,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. Kopano"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       />
       <label className="text-sm font-medium block mb-1.5">Email</label>
       <input
@@ -95,7 +95,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="they@example.com"
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         onKeyDown={(e) => e.key === "Enter" && submitEmail()}
       />
       <button
@@ -105,29 +105,29 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       >
         {pending ? "Working…" : "Send invite email"}
       </button>
-      <div className="flex items-center gap-2 my-3 text-xs text-slate-400">
-        <div className="flex-1 h-px bg-slate-200" />
+      <div className="flex items-center gap-2 my-3 text-xs text-slate-400 dark:text-slate-500">
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
         or
-        <div className="flex-1 h-px bg-slate-200" />
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
       </div>
       <button
         onClick={submitLink}
         disabled={pending || !name.trim() || !email.trim()}
-        className="w-full bg-white border border-slate-200 text-slate-700 py-2 rounded-lg font-medium text-sm hover:bg-slate-50 disabled:opacity-60"
+        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 py-2 rounded-lg font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
       >
         {pending ? "Working…" : "Generate invite link (no email)"}
       </button>
 
       {link && (
-        <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-          <div className="text-xs font-medium text-slate-600 mb-1.5">
+        <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
             One-time invite link
           </div>
           <div className="flex items-center gap-2">
             <input
               readOnly
               value={link}
-              className="flex-1 text-xs border border-slate-200 rounded px-2 py-1 bg-white font-mono truncate"
+              className="flex-1 text-xs border border-slate-200 dark:border-slate-700 rounded px-2 py-1 bg-white dark:bg-slate-900 font-mono truncate"
               onFocus={(e) => e.currentTarget.select()}
             />
             <button
@@ -138,7 +138,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
             DM this to them. It logs them in and lets them set a password.
           </p>
         </div>
@@ -148,7 +148,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       {success && !link && (
         <p className="text-sm text-emerald-600 mt-3">{success}</p>
       )}
-      <p className="text-xs text-slate-400 mt-3">
+      <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
         They&apos;ll set their own password from the email or link.
       </p>
     </div>

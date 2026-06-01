@@ -35,12 +35,12 @@ export default function MemberActions({
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-slate-100">
+    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
       <div className="flex flex-wrap gap-1.5">
         <button
           onClick={resend}
           disabled={pending}
-          className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1"
+          className="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1"
         >
           <Mail className="w-3 h-3" />
           Resend login link
@@ -49,7 +49,7 @@ export default function MemberActions({
           <button
             onClick={toggleAdmin}
             disabled={pending}
-            className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1"
+            className="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1"
           >
             {isAdminUser ? (
               <>

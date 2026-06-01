@@ -30,14 +30,14 @@ export default async function TeamPage() {
       <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold mb-1">Team</h2>
-          <p className="text-slate-500 text-sm">Who&apos;s working on what.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Who&apos;s working on what.</p>
         </div>
         {isAdmin && <InviteButton />}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {profiles.length === 0 && (
-          <div className="md:col-span-2 bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
-            <p className="text-slate-500 text-sm">
+          <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               No team members yet.{" "}
               {isAdmin
                 ? "Click \"Add user\" to invite someone."
@@ -54,7 +54,7 @@ export default async function TeamPage() {
             (t) => t.due_date && new Date(t.due_date) < new Date()
           );
           return (
-            <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-5">
+            <div key={p.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar name={p.name} url={p.avatar_url} size="lg" />
                 <div className="flex-1">
@@ -66,14 +66,14 @@ export default async function TeamPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     {open.length} open · {overdue.length} overdue
                   </p>
                 </div>
               </div>
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {open.length === 0 && (
-                  <p className="text-sm text-slate-400 italic">All clear.</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 italic">All clear.</p>
                 )}
                 {open.map((task) => {
                   const job = jobs.find((j) => j.id === task.job_id);
@@ -83,7 +83,7 @@ export default async function TeamPage() {
                   const taskOverdue =
                     task.due_date && new Date(task.due_date) < new Date();
                   return (
-                    <div key={task.id} className="text-sm p-2 rounded bg-slate-50">
+                    <div key={task.id} className="text-sm p-2 rounded bg-slate-50 dark:bg-slate-800/40">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <p className="font-medium leading-tight">{task.title}</p>
                         <span
@@ -92,7 +92,7 @@ export default async function TeamPage() {
                           {status.label}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         {client && <span>{client.name}</span>}
                         {task.due_date && (
                           <span className={taskOverdue ? "text-rose-600 font-medium" : ""}>

@@ -52,10 +52,10 @@ export default function JobDetail({
     <div>
       <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
-          <div className="text-sm text-slate-500 mb-1">{client.name}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{client.name}</div>
           <h2 className="text-2xl font-bold">{job.name}</h2>
           {job.due_date && (
-            <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" /> Due {formatDate(job.due_date)}
             </p>
           )}
@@ -69,15 +69,15 @@ export default function JobDetail({
               });
             }
           }}
-          className="text-slate-400 hover:text-rose-600 p-2"
+          className="text-slate-400 dark:text-slate-500 hover:text-rose-600 p-2"
           aria-label="Delete job"
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-        <h3 className="font-semibold mb-3 text-sm text-slate-600">Stage</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
+        <h3 className="font-semibold mb-3 text-sm text-slate-600 dark:text-slate-300">Stage</h3>
         <div className="flex items-center gap-1 flex-wrap">
           {STAGES.map((stage, i) => {
             const isActive = job.stage === stage.id;
@@ -94,8 +94,8 @@ export default function JobDetail({
                   isActive
                     ? stage.color + " ring-2 ring-offset-1 ring-slate-900"
                     : isPast
-                    ? "bg-slate-100 text-slate-500 border-slate-200"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 {stage.label}
@@ -106,19 +106,19 @@ export default function JobDetail({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Tasks</h3>
             <button
               onClick={() => setShowNewTask(true)}
-              className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-1"
+              className="text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
             >
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
           <div className="space-y-2">
             {tasks.length === 0 && (
-              <p className="text-sm text-slate-400 italic">No tasks yet.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">No tasks yet.</p>
             )}
             {tasks.map((task) => {
               const status =
@@ -132,17 +132,17 @@ export default function JobDetail({
                 : null;
 
               return (
-                <div key={task.id} className="p-3 rounded border border-slate-200 group">
+                <div key={task.id} className="p-3 rounded border border-slate-200 dark:border-slate-700 group">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1">
                       <p className="text-sm font-medium leading-tight">{task.title}</p>
                       {task.notes && (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{task.notes}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{task.notes}</p>
                       )}
                     </div>
                     <button
                       onClick={() => setEditingTask(task)}
-                      className="opacity-0 group-hover:opacity-100 text-xs text-slate-500 hover:text-slate-900"
+                      className="opacity-0 group-hover:opacity-100 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     >
                       Edit
                     </button>
@@ -150,14 +150,14 @@ export default function JobDetail({
                       onClick={() =>
                         startTransition(() => deleteTask(task.id))
                       }
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600"
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-rose-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {assignee && (
-                      <span className="text-xs text-slate-600 flex items-center gap-1">
+                      <span className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1">
                         <User className="w-3 h-3" />
                         {assignee.name}
                       </span>
@@ -165,7 +165,7 @@ export default function JobDetail({
                     {task.due_date && (
                       <span
                         className={`text-xs flex items-center gap-1 ${
-                          overdue ? "text-rose-600 font-medium" : "text-slate-500"
+                          overdue ? "text-rose-600 font-medium" : "text-slate-500 dark:text-slate-400"
                         }`}
                       >
                         <Calendar className="w-3 h-3" /> {formatDate(task.due_date)}
@@ -193,26 +193,26 @@ export default function JobDetail({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Deliverables</h3>
             <button
               onClick={() => setShowNewDel(true)}
-              className="text-sm text-slate-600 hover:text-slate-900 flex items-center gap-1"
+              className="text-sm text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
             >
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
           <div className="space-y-2">
             {deliverables.length === 0 && (
-              <p className="text-sm text-slate-400 italic">No deliverables yet.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">No deliverables yet.</p>
             )}
             {deliverables.map((d) => {
               const status =
                 DELIVERABLE_STATUSES.find((s) => s.id === d.status) ??
                 DELIVERABLE_STATUSES[0];
               return (
-                <div key={d.id} className="p-3 rounded border border-slate-200">
+                <div key={d.id} className="p-3 rounded border border-slate-200 dark:border-slate-700">
                   <div className="flex items-center justify-between mb-2 gap-2">
                     <p className="text-sm font-medium">{d.name}</p>
                     <span
@@ -231,7 +231,7 @@ export default function JobDetail({
                         )
                       )
                     }
-                    className="text-xs w-full border border-slate-200 rounded px-2 py-1"
+                    className="text-xs w-full border border-slate-200 dark:border-slate-700 rounded px-2 py-1"
                   >
                     {DELIVERABLE_STATUSES.map((s) => (
                       <option key={s.id} value={s.id}>

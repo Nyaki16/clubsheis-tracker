@@ -151,12 +151,12 @@ export default function ClientDetail({
     <div>
       <Link
         href="/clients"
-        className="text-sm text-slate-500 hover:text-slate-900 mb-3 inline-block"
+        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-3 inline-block"
       >
         ← All clients
       </Link>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <button
             onClick={() => setProfileCollapsed((v) => !v)}
@@ -165,9 +165,9 @@ export default function ClientDetail({
             aria-label={`${profileCollapsed ? "Expand" : "Collapse"} profile`}
           >
             {profileCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-slate-400 mt-1.5 flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-1.5 flex-shrink-0" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-400 mt-1.5 flex-shrink-0" />
+              <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500 mt-1.5 flex-shrink-0" />
             )}
             <div className="flex items-start gap-4 flex-1 min-w-0">
               {client.profile_pic_url && !imgFailed ? (
@@ -175,7 +175,7 @@ export default function ClientDetail({
                 <img
                   src={client.profile_pic_url}
                   alt={client.name}
-                  className="w-16 h-16 rounded-xl object-cover border border-slate-200 flex-shrink-0"
+                  className="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
                   onError={() => setImgFailed(true)}
                 />
               ) : (
@@ -189,11 +189,11 @@ export default function ClientDetail({
               <div className="min-w-0 flex-1">
                 <h2 className="text-2xl font-bold leading-tight">{client.name}</h2>
                 {client.business_name && (
-                  <p className="text-slate-600 text-sm mt-0.5">
+                  <p className="text-slate-600 dark:text-slate-300 text-sm mt-0.5">
                     {client.business_name}
                   </p>
                 )}
-                <p className="text-slate-500 text-xs mt-1">
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
                   {jobs.length} total {jobs.length === 1 ? "job" : "jobs"}
                 </p>
               </div>
@@ -201,14 +201,14 @@ export default function ClientDetail({
           </button>
           <button
             onClick={() => setEditingProfile(true)}
-            className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 hover:bg-slate-50"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <Pencil className="w-3.5 h-3.5" /> Edit profile
           </button>
         </div>
 
         {!profileCollapsed && client.about && (
-          <p className="text-sm text-slate-600 whitespace-pre-wrap mt-4 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap mt-4 leading-relaxed">
             {client.about}
           </p>
         )}
@@ -221,7 +221,7 @@ export default function ClientDetail({
                 href={client[key] as string}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-md"
               >
                 <Icon className="w-3.5 h-3.5" />
                 {label}
@@ -231,8 +231,8 @@ export default function ClientDetail({
         )}
 
         {!profileCollapsed && (
-          <div className="mt-5 pt-4 border-t border-slate-100">
-            <div className="text-xs uppercase tracking-wide text-slate-500 font-medium mb-2">
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium mb-2">
               Strategy documents
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -248,11 +248,11 @@ export default function ClientDetail({
                 return (
                   <div
                     key={manualKey}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-slate-200 bg-white"
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <FileText className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      <span className="text-sm text-slate-700 truncate">
+                      <FileText className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                      <span className="text-sm text-slate-700 dark:text-slate-300 truncate">
                         {label}
                       </span>
                       {source === "client-flow" && (
@@ -266,7 +266,7 @@ export default function ClientDetail({
                       {source === "manual" && (
                         <span
                           title="Manual override set in Edit profile"
-                          className="text-[10px] uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded"
+                          className="text-[10px] uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded"
                         >
                           Manual
                         </span>
@@ -277,12 +277,12 @@ export default function ClientDetail({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-medium text-slate-700 hover:text-slate-900 underline-offset-2 hover:underline flex items-center gap-1 flex-shrink-0"
+                        className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white underline-offset-2 hover:underline flex items-center gap-1 flex-shrink-0"
                       >
                         Open <ExternalLink className="w-3 h-3" />
                       </a>
                     ) : (
-                      <span className="text-xs text-slate-400 italic flex-shrink-0">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 italic flex-shrink-0">
                         Not set
                       </span>
                     )}
@@ -301,8 +301,8 @@ export default function ClientDetail({
 
       <div className="space-y-3">
         {jobs.length === 0 && (
-          <div className="bg-white rounded-xl border border-dashed border-slate-300 p-8 text-center">
-            <p className="text-slate-500 text-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               No jobs yet. Click &quot;New job&quot; to start.
             </p>
           </div>
@@ -323,7 +323,7 @@ export default function ClientDetail({
           return (
             <div
               key={job.id}
-              className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
               <div className="flex items-center gap-2 p-4">
                 <input
@@ -344,14 +344,14 @@ export default function ClientDetail({
                   aria-label={`${isExpanded ? "Collapse" : "Expand"} ${job.name}`}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 flex-shrink-0" />
                   )}
                   <ProgressDonut percent={pct} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold mb-1 truncate">{job.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
+                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                       <span>
                         {doneTasks}/{jobTasks.length} tasks done
                       </span>
@@ -365,7 +365,7 @@ export default function ClientDetail({
                 </button>
                 <Link
                   href={`/clients/${client.id}/jobs/${job.id}`}
-                  className="text-xs text-slate-500 hover:text-slate-900 underline-offset-2 hover:underline px-2 py-1"
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white underline-offset-2 hover:underline px-2 py-1"
                 >
                   Open
                 </Link>
@@ -429,22 +429,22 @@ function JobTasksSection({
   const [showNew, setShowNew] = useState(false);
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/40">
+    <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40/40">
       <div className="flex items-center justify-between px-5 py-2">
-        <span className="text-xs uppercase tracking-wide text-slate-500 font-medium">
+        <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium">
           Tasks
         </span>
         <button
           onClick={() => setShowNew(true)}
-          className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1"
+          className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
         >
           <Plus className="w-3.5 h-3.5" /> Add task
         </button>
       </div>
-      <div className="divide-y divide-slate-100 bg-white">
+      <div className="divide-y divide-slate-100 bg-white dark:bg-slate-900">
         <TaskGridHeader />
         {tasks.length === 0 && (
-          <p className="px-5 py-3 text-xs text-slate-400 italic">No tasks yet.</p>
+          <p className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500 italic">No tasks yet.</p>
         )}
         {tasks.map((task) => (
           <TaskGridRow

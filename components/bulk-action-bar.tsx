@@ -66,10 +66,10 @@ export default function BulkActionBar({
           Assign…
         </button>
         {open === "assignee" && (
-          <div className="absolute bottom-full mb-2 left-0 bg-white text-slate-900 border border-slate-200 rounded-lg shadow-lg w-48 py-1">
+          <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-48 py-1">
             <button
               onClick={() => run({ assignee_id: null })}
-              className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100"
+              className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               Unassigned
             </button>
@@ -77,7 +77,7 @@ export default function BulkActionBar({
               <button
                 key={p.id}
                 onClick={() => run({ assignee_id: p.id })}
-                className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100"
+                className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 {p.name}
               </button>
@@ -95,12 +95,12 @@ export default function BulkActionBar({
           Status…
         </button>
         {open === "status" && (
-          <div className="absolute bottom-full mb-2 left-0 bg-white text-slate-900 border border-slate-200 rounded-lg shadow-lg w-44 py-1">
+          <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-44 py-1">
             {TASK_STATUSES.map((s) => (
               <button
                 key={s.id}
                 onClick={() => run({ status: s.id })}
-                className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100"
+                className="w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 {s.label}
               </button>
@@ -118,13 +118,13 @@ export default function BulkActionBar({
           Due date…
         </button>
         {open === "due" && (
-          <div className="absolute bottom-full mb-2 left-0 bg-white text-slate-900 border border-slate-200 rounded-lg shadow-lg p-3 w-56">
+          <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 w-56">
             <input
               type="date"
               autoFocus
               value={dueDraft}
               onChange={(e) => setDueDraft(e.target.value)}
-              className="w-full border border-slate-200 rounded px-2 py-1 text-xs mb-2"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs mb-2"
             />
             <div className="flex items-center gap-2">
               <button
@@ -142,7 +142,7 @@ export default function BulkActionBar({
                   run({ due_date: null });
                   setDueDraft("");
                 }}
-                className="text-xs px-2 py-1 rounded text-slate-600 hover:bg-slate-100"
+                className="text-xs px-2 py-1 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 Clear
               </button>

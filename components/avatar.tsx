@@ -27,7 +27,7 @@ export default function Avatar({
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={url} alt={name} className={`${base} object-cover border border-slate-200`} />
+      <img src={url} alt={name} className={`${base} object-cover border border-slate-200 dark:border-slate-700`} />
     );
   }
   return (

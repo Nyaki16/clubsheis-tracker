@@ -75,7 +75,7 @@ export default function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             autoComplete="email"
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+            className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
             disabled={resetSent}
           />
         </div>
@@ -95,7 +95,7 @@ export default function LoginForm() {
             Check your email — we sent a link to set a new password.
           </p>
         )}
-        <p className="text-xs text-slate-400 text-center pt-2">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-2">
           <button
             type="button"
             onClick={() => switchMode("signin")}
@@ -119,7 +119,7 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         />
       </div>
       <div>
@@ -128,7 +128,7 @@ export default function LoginForm() {
           <button
             type="button"
             onClick={() => switchMode("reset")}
-            className="text-xs text-slate-500 hover:text-slate-700 underline-offset-2 hover:underline"
+            className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline-offset-2 hover:underline"
           >
             Forgot password?
           </button>
@@ -141,7 +141,7 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
           autoComplete="current-password"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         />
       </div>
       <button
@@ -152,7 +152,7 @@ export default function LoginForm() {
         {submitting ? "Signing in…" : "Sign in"}
       </button>
       {error && <p className="text-sm text-rose-600 mt-2">{error}</p>}
-      <p className="text-xs text-slate-400 text-center pt-2">
+      <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-2">
         New here? Ask an admin to invite you.
       </p>
     </form>

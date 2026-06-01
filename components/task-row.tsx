@@ -136,7 +136,7 @@ function ColResizeHandle({ index }: { index: number }) {
       className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-10 group/handle"
       aria-hidden
     >
-      <div className="absolute right-1.5 top-1 bottom-1 w-px bg-slate-200 group-hover/handle:bg-slate-500 transition-colors" />
+      <div className="absolute right-1.5 top-1 bottom-1 w-px bg-slate-200 dark:bg-slate-700 group-hover/handle:bg-slate-500 transition-colors" />
     </div>
   );
 }
@@ -172,7 +172,7 @@ export function TaskGridHeader({
       )
     ) : null;
 
-  const cellBtn = "flex items-center gap-1 hover:text-slate-700 truncate";
+  const cellBtn = "flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200 truncate";
   const sortable = (k: SortKey, label: string) =>
     onSort ? (
       <button onClick={() => onSort(k)} className={cellBtn}>
@@ -198,7 +198,7 @@ export function TaskGridHeader({
     <div
       data-task-grid-row
       style={{ gridTemplateColumns: gridTemplate }}
-      className="hidden md:grid gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50"
+      className="hidden md:grid gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium bg-slate-50 dark:bg-slate-800/40/50"
     >
       {cells.map((c, i) => (
         <div key={COL_KEYS[i]} className="relative min-w-0">
@@ -255,7 +255,7 @@ export function PriorityStar({ task }: { task: Task }) {
           ? "text-amber-600 hover:text-amber-700"
           : disabledForUnassigned
           ? "text-slate-200 cursor-not-allowed opacity-0 group-hover:opacity-100"
-          : "text-slate-300 hover:text-amber-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
+          : "text-slate-300 dark:text-slate-600 hover:text-amber-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
       } ${pending ? "opacity-50" : ""}`}
     >
       {isSet ? (
@@ -335,12 +335,12 @@ function ReassignPopover({
         width: 176,
         zIndex: 100,
       }}
-      className="bg-white border border-slate-200 rounded-lg shadow-lg py-1"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1"
     >
       <button
         onClick={() => onPick(null)}
-        className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 ${
-          currentId === null ? "font-semibold text-slate-900" : "text-slate-600"
+        className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 ${
+          currentId === null ? "font-semibold text-slate-900 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"
         }`}
       >
         Unassigned
@@ -349,8 +349,8 @@ function ReassignPopover({
         <button
           key={p.id}
           onClick={() => onPick(p.id)}
-          className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 ${
-            currentId === p.id ? "font-semibold text-slate-900" : "text-slate-600"
+          className={`w-full text-left text-xs px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 ${
+            currentId === p.id ? "font-semibold text-slate-900 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"
           }`}
         >
           <Avatar name={p.name} url={p.avatar_url} size="sm" />
@@ -544,7 +544,7 @@ export function TaskGridRow({
         } as React.CSSProperties
       }
       className={`grid grid-cols-1 md:[grid-template-columns:var(--cols)] gap-3 px-5 py-3 group items-start ${
-        selected ? "bg-slate-100" : "hover:bg-slate-50"
+        selected ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800"
       }`}
     >
       <div className="flex items-center gap-2 min-w-0 pt-1">
@@ -564,7 +564,7 @@ export function TaskGridRow({
             style={{ backgroundColor: client.color }}
           />
         )}
-        <span className="text-sm text-slate-700 truncate">
+        <span className="text-sm text-slate-700 dark:text-slate-300 truncate">
           {client?.name ?? "—"}
         </span>
       </div>
@@ -585,18 +585,18 @@ export function TaskGridRow({
                   setEditingTitle(false);
                 }
               }}
-              className="flex-1 min-w-0 text-sm font-medium leading-tight border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+              className="flex-1 min-w-0 text-sm font-medium leading-tight border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
             />
           ) : (
             <button
               onClick={() => setEditingTitle(true)}
-              className="text-left text-sm font-medium leading-tight hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 flex-1 min-w-0 truncate"
+              className="text-left text-sm font-medium leading-tight hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 flex-1 min-w-0 truncate"
             >
               {task.title}
             </button>
           )}
         </div>
-        {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
+        {job && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 px-1.5">{job.name}</p>}
       </div>
 
       <div className="min-w-0 pt-1">
@@ -614,7 +614,7 @@ export function TaskGridRow({
             }}
             rows={4}
             placeholder="Notes…"
-            className="w-full text-xs text-slate-700 border border-slate-300 rounded px-1.5 py-1 focus:outline-none focus:border-slate-900 resize-y"
+            className="w-full text-xs text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded px-1.5 py-1 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300 resize-y"
           />
         ) : task.notes ? (
           <button
@@ -625,13 +625,13 @@ export function TaskGridRow({
                 setEditingNotes(true);
               }
             }}
-            className="flex items-start gap-1 text-left text-xs text-slate-600 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full"
+            className="flex items-start gap-1 text-left text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 w-full"
             title={notesExpanded ? "Click to edit" : "Click to expand"}
           >
             {notesExpanded ? (
-              <ChevronDown className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+              <ChevronDown className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500" />
             ) : (
-              <ChevronRight className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400" />
+              <ChevronRight className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500" />
             )}
             <span className={notesExpanded ? "whitespace-pre-wrap" : "truncate"}>
               {task.notes}
@@ -640,7 +640,7 @@ export function TaskGridRow({
         ) : (
           <button
             onClick={() => setEditingNotes(true)}
-            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-1.5 -mx-1.5"
           >
             + add note
           </button>
@@ -663,7 +663,7 @@ export function TaskGridRow({
               }
             }}
             placeholder="https://…"
-            className="w-full text-xs border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+            className="w-full text-xs border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           />
         ) : task.url ? (
           <div className="flex items-center gap-1 group/url">
@@ -671,15 +671,15 @@ export function TaskGridRow({
               href={task.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-slate-700 hover:text-slate-900 hover:underline flex items-center gap-1 truncate"
+              className="text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:underline flex items-center gap-1 truncate"
               title={task.url}
             >
-              <LinkIcon className="w-3 h-3 flex-shrink-0 text-slate-400" />
+              <LinkIcon className="w-3 h-3 flex-shrink-0 text-slate-400 dark:text-slate-500" />
               <span className="truncate">{prettyUrl(task.url)}</span>
             </a>
             <button
               onClick={() => setEditingUrl(true)}
-              className="opacity-0 group-hover/url:opacity-100 text-[10px] text-slate-400 hover:text-slate-700 px-1"
+              className="opacity-0 group-hover/url:opacity-100 text-[10px] text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-1"
               aria-label="Edit URL"
             >
               edit
@@ -688,7 +688,7 @@ export function TaskGridRow({
         ) : (
           <button
             onClick={() => setEditingUrl(true)}
-            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-1.5 -mx-1.5"
           >
             + link
           </button>
@@ -706,13 +706,13 @@ export function TaskGridRow({
               if (e.key === "Enter") saveDate((e.target as HTMLInputElement).value);
               if (e.key === "Escape") setEditingDate(false);
             }}
-            className="w-full text-sm border border-slate-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900"
+            className="w-full text-sm border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
           />
         ) : task.due_date ? (
           <button
             onClick={() => setEditingDate(true)}
-            className={`text-sm flex items-center gap-1 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 truncate ${
-              overdue ? "text-rose-600 font-medium" : "text-slate-600"
+            className={`text-sm flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 truncate ${
+              overdue ? "text-rose-600 font-medium" : "text-slate-600 dark:text-slate-300"
             }`}
           >
             <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -721,7 +721,7 @@ export function TaskGridRow({
         ) : (
           <button
             onClick={() => setEditingDate(true)}
-            className="text-xs text-slate-400 hover:text-slate-700 px-1.5 -mx-1.5"
+            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 px-1.5 -mx-1.5"
           >
             + set date
           </button>
@@ -732,8 +732,8 @@ export function TaskGridRow({
         <button
           ref={assigneeBtnRef}
           onClick={() => setReassigning((v) => !v)}
-          className={`text-sm flex items-center gap-1.5 hover:bg-slate-100 rounded px-1.5 py-0.5 -mx-1.5 w-full text-left min-w-0 ${
-            task.assignee_id ? "text-slate-700" : "text-slate-400"
+          className={`text-sm flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 w-full text-left min-w-0 ${
+            task.assignee_id ? "text-slate-700 dark:text-slate-300" : "text-slate-400 dark:text-slate-500"
           }`}
           title="Click to reassign"
         >
@@ -744,7 +744,7 @@ export function TaskGridRow({
             return a ? (
               <Avatar name={a.name} url={a.avatar_url} size="sm" />
             ) : (
-              <UserCog className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+              <UserCog className="w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500" />
             );
           })()}
           <span className="truncate">
@@ -776,7 +776,7 @@ export function TaskGridRow({
             className={`flex items-center justify-center w-4 h-4 rounded border flex-shrink-0 ${
               task.sent_for_approval
                 ? "bg-amber-500 border-amber-500 text-white"
-                : "border-slate-300 hover:border-slate-500 bg-white"
+                : "border-slate-300 dark:border-slate-700 hover:border-slate-500 bg-white dark:bg-slate-900"
             }`}
             title={
               task.sent_for_approval
@@ -794,8 +794,8 @@ export function TaskGridRow({
               task.approved
                 ? "bg-emerald-500 border-emerald-500 text-white"
                 : task.sent_for_approval
-                ? "border-slate-300 hover:border-emerald-500 bg-white"
-                : "border-slate-200 bg-slate-50 cursor-not-allowed"
+                ? "border-slate-300 dark:border-slate-700 hover:border-emerald-500 bg-white dark:bg-slate-900"
+                : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed"
             }`}
             title={
               !task.sent_for_approval
@@ -810,7 +810,7 @@ export function TaskGridRow({
           </button>
           {task.sent_for_approval && task.approver_id && (
             <span
-              className="text-[10px] text-slate-500 truncate"
+              className="text-[10px] text-slate-500 dark:text-slate-400 truncate"
               title={`To ${
                 profiles.find((p) => p.id === task.approver_id)?.name ?? "—"
               }`}
@@ -853,7 +853,7 @@ export function TaskGridRow({
             if (confirm("Delete this task?"))
               startTransition(() => deleteTask(task.id));
           }}
-          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1"
+          className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-rose-600 p-1"
           aria-label="Delete task"
         >
           <X className="w-4 h-4" />

@@ -31,7 +31,7 @@ export default async function JobDetailPage({
     <div>
       <Link
         href={`/clients/${id}`}
-        className="text-sm text-slate-500 hover:text-slate-900 mb-3 inline-block"
+        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-3 inline-block"
       >
         ← Back
       </Link>

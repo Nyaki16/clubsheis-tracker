@@ -46,7 +46,7 @@ export default function WelcomeForm() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
           autoComplete="new-password"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         />
       </div>
       <div>
@@ -58,7 +58,7 @@ export default function WelcomeForm() {
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           autoComplete="new-password"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900"
+          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
         />
       </div>
       <button
