@@ -188,25 +188,27 @@ export default function ClientsList({
         <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
           <button
             onClick={() => setView("grid")}
-            className={`text-xs px-2 py-1 rounded-md flex items-center gap-1 ${
+            className={`text-xs px-2.5 py-1.5 rounded-md font-medium flex items-center gap-1.5 ${
               view === "grid"
                 ? "bg-white shadow-sm text-slate-900"
                 : "text-slate-500 hover:text-slate-700"
             }`}
             aria-label="Grid view"
           >
-            <LayoutGrid className="w-3.5 h-3.5" />
+            <LayoutGrid className="w-4 h-4" />
+            <span>Grid</span>
           </button>
           <button
             onClick={() => setView("list")}
-            className={`text-xs px-2 py-1 rounded-md flex items-center gap-1 ${
+            className={`text-xs px-2.5 py-1.5 rounded-md font-medium flex items-center gap-1.5 ${
               view === "list"
                 ? "bg-white shadow-sm text-slate-900"
                 : "text-slate-500 hover:text-slate-700"
             }`}
             aria-label="List view"
           >
-            <ListIcon className="w-3.5 h-3.5" />
+            <ListIcon className="w-4 h-4" />
+            <span>List</span>
           </button>
         </div>
         <div className="text-xs text-slate-500 sm:ml-auto whitespace-nowrap">
