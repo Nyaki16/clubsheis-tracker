@@ -28,6 +28,119 @@ import {
 export type SortKey = "client" | "task" | "due" | "status";
 export type SortDir = "asc" | "desc";
 
+// ── Column widths (shared singleton so every row stays in sync) ──────────
+//
+// Each column's width is an `fr` unit. Resize handles redistribute width
+// between two adjacent cols; total fr stays constant so other cols don't
+// shift.
+
+const COL_KEYS = [
+  "client",
+  "task",
+  "notes",
+  "link",
+  "due",
+  "assignee",
+  "approval",
+  "status",
+] as const;
+
+const DEFAULT_COL_WIDTHS: number[] = [2, 3, 2, 1, 1, 2, 2, 2];
+const MIN_FR = 0.5;
+const STORAGE_KEY = "task-grid.widths.v1";
+
+let _widths: number[] = [...DEFAULT_COL_WIDTHS];
+let _widthsLoaded = false;
+const _widthSubs = new Set<() => void>();
+
+function loadWidthsOnce() {
+  if (_widthsLoaded) return;
+  _widthsLoaded = true;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === DEFAULT_COL_WIDTHS.length &&
+      parsed.every((n) => typeof n === "number" && n >= MIN_FR)
+    ) {
+      _widths = parsed;
+    }
+  } catch {}
+}
+
+function commitWidths(next: number[]) {
+  _widths = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(_widths));
+  } catch {}
+  _widthSubs.forEach((cb) => cb());
+}
+
+function useColumnWidths() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    loadWidthsOnce();
+    const cb = () => force((v) => v + 1);
+    _widthSubs.add(cb);
+    // Re-render once after load in case localStorage had values.
+    force((v) => v + 1);
+    return () => {
+      _widthSubs.delete(cb);
+    };
+  }, []);
+  return {
+    widths: _widths,
+    gridTemplate: _widths.map((w) => `${w}fr`).join(" "),
+  };
+}
+
+// Drag handle between columns `index` and `index + 1`. Pointer events; uses
+// the container's bounding box to translate pixel-delta → fr-delta.
+function ColResizeHandle({ index }: { index: number }) {
+  return (
+    <div
+      onPointerDown={(e) => {
+        e.preventDefault();
+        const handle = e.currentTarget as HTMLDivElement;
+        handle.setPointerCapture(e.pointerId);
+        const header = handle.closest<HTMLElement>("[data-task-grid-row]");
+        const containerWidth = header
+          ? header.getBoundingClientRect().width
+          : 1000;
+        const startX = e.clientX;
+        const start = [..._widths];
+        const totalFr = start.reduce((s, v) => s + v, 0);
+        const frPerPx = totalFr / Math.max(containerWidth, 1);
+
+        function move(ev: PointerEvent) {
+          const dx = ev.clientX - startX;
+          const dFr = dx * frPerPx;
+          const a = start[index] + dFr;
+          const b = start[index + 1] - dFr;
+          if (a < MIN_FR || b < MIN_FR) return;
+          const next = [...start];
+          next[index] = a;
+          next[index + 1] = b;
+          commitWidths(next);
+        }
+        function up() {
+          handle.releasePointerCapture(e.pointerId);
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+        }
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      }}
+      className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-10 group/handle"
+      aria-hidden
+    >
+      <div className="absolute right-1.5 top-1 bottom-1 w-px bg-slate-200 group-hover/handle:bg-slate-500 transition-colors" />
+    </div>
+  );
+}
+
 // Short display string for a URL: "drive.google.com/…" → just the host.
 function prettyUrl(url: string): string {
   try {
@@ -48,6 +161,8 @@ export function TaskGridHeader({
   sortDir?: SortDir;
   onSort?: (k: SortKey) => void;
 }) {
+  const { gridTemplate } = useColumnWidths();
+
   const arrow = (k: SortKey) =>
     onSort && sortKey === k ? (
       sortDir === "asc" ? (
@@ -57,42 +172,40 @@ export function TaskGridHeader({
       )
     ) : null;
 
-  const cell = "flex items-center gap-1 hover:text-slate-700";
-  const ColButton = ({
-    k,
-    span,
-    children,
-  }: {
-    k: SortKey;
-    span: string;
-    children: React.ReactNode;
-  }) =>
+  const cellBtn = "flex items-center gap-1 hover:text-slate-700 truncate";
+  const sortable = (k: SortKey, label: string) =>
     onSort ? (
-      <button onClick={() => onSort(k)} className={`${span} ${cell}`}>
-        {children} {arrow(k)}
+      <button onClick={() => onSort(k)} className={cellBtn}>
+        {label} {arrow(k)}
       </button>
     ) : (
-      <div className={span}>{children}</div>
+      <div className="truncate">{label}</div>
     );
 
+  // Order matches COL_KEYS / DEFAULT_COL_WIDTHS.
+  const cells: { content: React.ReactNode }[] = [
+    { content: sortable("client", "Client") },
+    { content: sortable("task", "Task") },
+    { content: <div className="truncate">Notes</div> },
+    { content: <div className="truncate">Link</div> },
+    { content: sortable("due", "Due") },
+    { content: <div className="truncate">Assignee</div> },
+    { content: <div className="truncate">Approval</div> },
+    { content: sortable("status", "Status") },
+  ];
+
   return (
-    <div className="hidden md:grid grid-cols-16 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50">
-      <ColButton k="client" span="col-span-2">
-        Client
-      </ColButton>
-      <ColButton k="task" span="col-span-3">
-        Task
-      </ColButton>
-      <div className="col-span-2">Notes</div>
-      <div className="col-span-1">Link</div>
-      <ColButton k="due" span="col-span-1">
-        Due
-      </ColButton>
-      <div className="col-span-2">Assignee</div>
-      <div className="col-span-2">Approval</div>
-      <ColButton k="status" span="col-span-2">
-        Status
-      </ColButton>
+    <div
+      data-task-grid-row
+      style={{ gridTemplateColumns: gridTemplate }}
+      className="hidden md:grid gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 font-medium bg-slate-50/50"
+    >
+      {cells.map((c, i) => (
+        <div key={COL_KEYS[i]} className="relative min-w-0">
+          {c.content}
+          {i < cells.length - 1 && <ColResizeHandle index={i} />}
+        </div>
+      ))}
     </div>
   );
 }
@@ -266,6 +379,7 @@ export function TaskGridRow({
   selected?: boolean;
   onToggleSelected?: () => void;
 }) {
+  const { gridTemplate } = useColumnWidths();
   const [, startTransition] = useTransition();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(task.title);
@@ -393,11 +507,19 @@ export function TaskGridRow({
   return (
     <div
       ref={rowRef}
-      className={`grid grid-cols-1 md:grid-cols-16 gap-3 px-5 py-3 group items-start ${
+      data-task-grid-row
+      style={
+        {
+          // Desktop applies the resizable template via CSS var. Mobile falls
+          // back to a single-column stack from the Tailwind classes below.
+          ["--cols" as string]: gridTemplate,
+        } as React.CSSProperties
+      }
+      className={`grid grid-cols-1 md:[grid-template-columns:var(--cols)] gap-3 px-5 py-3 group items-start ${
         selected ? "bg-slate-100" : "hover:bg-slate-50"
       }`}
     >
-      <div className="md:col-span-2 flex items-center gap-2 min-w-0 pt-1">
+      <div className="flex items-center gap-2 min-w-0 pt-1">
         {onToggleSelected && (
           <input
             type="checkbox"
@@ -419,7 +541,7 @@ export function TaskGridRow({
         </span>
       </div>
 
-      <div className="md:col-span-3 min-w-0">
+      <div className="min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <PriorityStar task={task} />
           {editingTitle ? (
@@ -449,7 +571,7 @@ export function TaskGridRow({
         {job && <p className="text-xs text-slate-500 mt-0.5 px-1.5">{job.name}</p>}
       </div>
 
-      <div className="md:col-span-2 min-w-0 pt-1">
+      <div className="min-w-0 pt-1">
         {editingNotes ? (
           <textarea
             autoFocus
@@ -497,7 +619,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-1 pt-1 min-w-0">
+      <div className="pt-1 min-w-0">
         {editingUrl ? (
           <input
             autoFocus
@@ -545,7 +667,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-1 pt-1 min-w-0">
+      <div className="pt-1 min-w-0">
         {editingDate ? (
           <input
             type="date"
@@ -578,7 +700,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 pt-1 min-w-0">
+      <div className="pt-1 min-w-0">
         <button
           ref={assigneeBtnRef}
           onClick={() => setReassigning((v) => !v)}
@@ -614,7 +736,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 pt-1 min-w-0">
+      <div className="pt-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <button
             ref={approverBtnRef}
@@ -681,7 +803,7 @@ export function TaskGridRow({
         )}
       </div>
 
-      <div className="md:col-span-2 flex items-center gap-1 pt-0.5">
+      <div className="flex items-center gap-1 pt-0.5">
         <select
           value={task.status}
           onChange={(e) => {
