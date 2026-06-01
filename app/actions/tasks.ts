@@ -14,6 +14,7 @@ export type TaskInput = {
   sent_for_approval?: boolean;
   approver_id?: string | null;
   approved?: boolean;
+  originator_id?: string | null;
 };
 
 export async function createTask(jobId: string, input: TaskInput) {
@@ -29,6 +30,7 @@ export async function createTask(jobId: string, input: TaskInput) {
     sent_for_approval: input.sent_for_approval ?? false,
     approver_id: input.approver_id ?? null,
     approved: input.approved ?? false,
+    originator_id: input.originator_id ?? null,
   });
   if (error) throw new Error(error.message);
 
@@ -52,6 +54,8 @@ export async function updateTask(id: string, updates: Partial<TaskInput>) {
     payload.sent_for_approval = updates.sent_for_approval;
   if (updates.approver_id !== undefined) payload.approver_id = updates.approver_id;
   if (updates.approved !== undefined) payload.approved = updates.approved;
+  if (updates.originator_id !== undefined)
+    payload.originator_id = updates.originator_id;
 
   const { error } = await supabase.from("tasks").update(payload).eq("id", id);
   if (error) throw new Error(error.message);

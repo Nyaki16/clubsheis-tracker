@@ -473,35 +473,63 @@ export function TaskGridRow({
     setPickingApprover(false);
     if (approverId === task.approver_id && task.sent_for_approval) return;
     justSavedRef.current = true;
-    // When sending for approval, also reassign the task to the approver so
-    // it shows up in their task list. When clearing the approver, leave the
-    // current assignee alone (it may have been a previous handoff).
-    startTransition(() =>
-      updateTask(task.id, {
-        approver_id: approverId,
-        sent_for_approval: approverId !== null,
-        ...(approverId !== null ? { assignee_id: approverId } : {}),
-      })
-    );
+    // When sending for approval: stash the current assignee as the
+    // originator so we know who to hand the task back to once approved.
+    // Then reassign to the approver so it lands in their task list.
+    // When clearing: leave the originator/assignee alone — undoing only
+    // resets the approval flags, not who the task belongs to.
+    if (approverId !== null) {
+      startTransition(() =>
+        updateTask(task.id, {
+          approver_id: approverId,
+          sent_for_approval: true,
+          assignee_id: approverId,
+          originator_id: task.originator_id ?? task.assignee_id ?? null,
+        })
+      );
+    } else {
+      startTransition(() =>
+        updateTask(task.id, {
+          approver_id: null,
+          sent_for_approval: false,
+        })
+      );
+    }
   }
 
   function clearApproval() {
     if (!task.sent_for_approval && !task.approved && !task.approver_id) return;
     justSavedRef.current = true;
+    // Undo of the send: hand the task back to whoever originated it, then
+    // wipe the approval state.
     startTransition(() =>
       updateTask(task.id, {
         sent_for_approval: false,
         approver_id: null,
         approved: false,
+        ...(task.originator_id ? { assignee_id: task.originator_id } : {}),
+        originator_id: null,
       })
     );
   }
 
   function toggleApproved() {
     justSavedRef.current = true;
-    startTransition(() =>
-      updateTask(task.id, { approved: !task.approved })
-    );
+    const nextApproved = !task.approved;
+    // When approving for the first time, hand the task back to whoever
+    // originally sent it for review. Clear the originator afterwards so a
+    // second round-trip would re-capture the new sender.
+    if (nextApproved && task.originator_id) {
+      startTransition(() =>
+        updateTask(task.id, {
+          approved: true,
+          assignee_id: task.originator_id,
+          originator_id: null,
+        })
+      );
+    } else {
+      startTransition(() => updateTask(task.id, { approved: nextApproved }));
+    }
   }
 
   return (

@@ -83,6 +83,7 @@ export type Task = {
   sent_for_approval: boolean;
   approver_id: string | null;
   approved: boolean;
+  originator_id: string | null;
   created_at: string;
   updated_at: string;
 };
