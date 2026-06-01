@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
+import Modal from "@/components/modal";
+import { TaskForm } from "@/components/forms";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
-import type { Client, Job, Task } from "@/lib/types";
-import { updateTaskStatus } from "@/app/actions/tasks";
+import type { Client, Job, Profile, Task } from "@/lib/types";
+import { updateTask, updateTaskStatus } from "@/app/actions/tasks";
 
 export default function PipelineBoard({
   tasks: serverTasks,
   jobs,
   clients,
+  profiles,
 }: {
   tasks: Task[];
   jobs: Job[];
   clients: Client[];
+  profiles: Profile[];
 }) {
   // Local mirror so a drop reflects instantly (server action revalidates in
   // the background and the prop syncs on the next render).
@@ -21,6 +25,7 @@ export default function PipelineBoard({
   const [, startTransition] = useTransition();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hoverCol, setHoverCol] = useState<TaskStatusId | null>(null);
+  const [editing, setEditing] = useState<Task | null>(null);
 
   // If the server data shifts (after a save → revalidate), reconcile.
   // Server is the source of truth, but never clobber an in-flight drag.
@@ -113,7 +118,16 @@ export default function PipelineBoard({
                         setDraggingId(null);
                         setHoverCol(null);
                       }}
-                      className={`p-2 rounded border bg-white cursor-grab active:cursor-grabbing select-none ${
+                      onClick={(e) => {
+                        // Don't open the editor when the click was actually a
+                        // drag, or when the click landed on the inner "job"
+                        // link (which navigates).
+                        if (draggingId) return;
+                        const target = e.target as HTMLElement;
+                        if (target.closest("a")) return;
+                        setEditing(task);
+                      }}
+                      className={`p-2 rounded border bg-white cursor-pointer select-none ${
                         isDragging
                           ? "border-slate-400 opacity-50"
                           : "border-slate-200 hover:border-slate-400"
@@ -154,6 +168,20 @@ export default function PipelineBoard({
           );
         })}
       </div>
+
+      {editing && (
+        <Modal title="Edit task" onClose={() => setEditing(null)}>
+          <TaskForm
+            profiles={profiles}
+            initial={editing}
+            submitLabel="Save changes"
+            onSubmit={async (input) => {
+              await updateTask(editing.id, input);
+              setEditing(null);
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

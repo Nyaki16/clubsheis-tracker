@@ -251,13 +251,7 @@ export default function JobDetail({
           <TaskForm
             profiles={profiles}
             onSubmit={async (input) => {
-              await createTask(job.id, {
-                title: input.title,
-                assignee_id: input.assignee_id,
-                due_date: input.due_date,
-                notes: input.notes,
-                status: input.status,
-              });
+              await createTask(job.id, input);
               setShowNewTask(false);
             }}
           />

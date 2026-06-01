@@ -152,6 +152,10 @@ export type TaskFormPayload = {
   due_date: string;
   notes: string;
   status: TaskStatusId;
+  url: string | null;
+  sent_for_approval: boolean;
+  approver_id: string | null;
+  approved: boolean;
   job_id?: string;
 };
 
@@ -179,6 +183,12 @@ export function TaskForm({
   const [dueDate, setDueDate] = useState(initial?.due_date ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<TaskStatusId>((initial?.status as TaskStatusId) ?? "planning");
+  const [url, setUrl] = useState(initial?.url ?? "");
+  const [sentForApproval, setSentForApproval] = useState<boolean>(
+    initial?.sent_for_approval ?? false
+  );
+  const [approverId, setApproverId] = useState<string>(initial?.approver_id ?? "");
+  const [approved, setApproved] = useState<boolean>(initial?.approved ?? false);
   const [clientId, setClientId] = useState<string>("");
   const [jobId, setJobId] = useState<string>("");
   const [pending, startTransition] = useTransition();
@@ -189,12 +199,18 @@ export function TaskForm({
     if (!title.trim()) return;
     if (needsJobPicker && !jobId) return;
     startTransition(async () => {
+      const trimmedUrl = url.trim();
+      const effectiveSent = sentForApproval && !!approverId;
       await onSubmit({
         title: title.trim(),
         assignee_id: assigneeId || null,
         due_date: dueDate,
         notes,
         status,
+        url: trimmedUrl || null,
+        sent_for_approval: effectiveSent,
+        approver_id: effectiveSent ? approverId : null,
+        approved: effectiveSent ? approved : false,
         job_id: needsJobPicker ? jobId : undefined,
       });
     });
@@ -295,8 +311,65 @@ export function TaskForm({
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Context, links, blockers…"
         rows={3}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900 resize-none"
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-slate-900 resize-none"
       />
+
+      <label className="text-sm font-medium block mb-1.5">Link (optional)</label>
+      <input
+        type="url"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://docs.google.com/…"
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-slate-900"
+      />
+
+      <div className="border-t border-slate-100 pt-3 mb-4">
+        <label className="text-sm font-medium block mb-2">Approval</label>
+        <label className="flex items-center gap-2 mb-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sentForApproval}
+            onChange={(e) => {
+              setSentForApproval(e.target.checked);
+              if (!e.target.checked) setApproved(false);
+            }}
+            className="rounded"
+          />
+          <span className="text-sm">Send for approval</span>
+        </label>
+        {sentForApproval && (
+          <>
+            <select
+              value={approverId}
+              onChange={(e) => setApproverId(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-slate-900"
+            >
+              <option value="">Pick the approver…</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={approved}
+                onChange={(e) => setApproved(e.target.checked)}
+                disabled={!approverId}
+                className="rounded"
+              />
+              <span
+                className={`text-sm ${
+                  approverId ? "" : "text-slate-400"
+                }`}
+              >
+                Approved
+              </span>
+            </label>
+          </>
+        )}
+      </div>
 
       <button
         onClick={submit}

@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Client, Job, Task } from "@/lib/types";
+import type { Client, Job, Profile, Task } from "@/lib/types";
 import PipelineBoard from "./pipeline-board";
 
 export default async function PipelinePage() {
   const supabase = await createClient();
-  const [tasksRes, jobsRes, clientsRes] = await Promise.all([
+  const [tasksRes, jobsRes, clientsRes, profilesRes] = await Promise.all([
     supabase.from("tasks").select("*").order("created_at", { ascending: true }),
     supabase.from("jobs").select("*"),
     supabase.from("clients").select("*"),
+    supabase.from("profiles").select("*").order("name"),
   ]);
 
   return (
@@ -15,6 +16,7 @@ export default async function PipelinePage() {
       tasks={(tasksRes.data ?? []) as Task[]}
       jobs={(jobsRes.data ?? []) as Job[]}
       clients={(clientsRes.data ?? []) as Client[]}
+      profiles={(profilesRes.data ?? []) as Profile[]}
     />
   );
 }
