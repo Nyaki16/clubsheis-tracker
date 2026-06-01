@@ -19,8 +19,8 @@ import Modal from "@/components/modal";
 import { ClientProfileForm, TaskForm } from "@/components/forms";
 import { TaskGridHeader, TaskGridRow } from "@/components/task-row";
 import BulkActionBar from "@/components/bulk-action-bar";
+import ProgressDonut from "@/components/progress-donut";
 import NewJobButton from "./new-job-button";
-import { STAGES } from "@/lib/constants";
 import type { Client, ClientFlowDocs, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { updateClient } from "@/app/actions/clients";
@@ -308,11 +308,13 @@ export default function ClientDetail({
           </div>
         )}
         {jobs.map((job) => {
-          const stage = STAGES.find((s) => s.id === job.stage);
           const jobTasks = tasks.filter((t) => t.job_id === job.id);
           const doneTasks = jobTasks.filter(
             (t) => t.status === "closed_out" || t.status === "published"
           ).length;
+          const pct = jobTasks.length
+            ? Math.round((doneTasks / jobTasks.length) * 100)
+            : 0;
           const isExpanded = expanded.has(job.id);
           const jobTaskIds = jobTasks.map((t) => t.id);
           const allSelected =
@@ -346,17 +348,9 @@ export default function ClientDetail({
                   ) : (
                     <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                   )}
+                  <ProgressDonut percent={pct} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
-                      <h3 className="font-semibold">{job.name}</h3>
-                      {stage && (
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium border ${stage.color}`}
-                        >
-                          {stage.label}
-                        </span>
-                      )}
-                    </div>
+                    <h3 className="font-semibold mb-1 truncate">{job.name}</h3>
                     <div className="flex items-center gap-4 text-sm text-slate-500">
                       <span>
                         {doneTasks}/{jobTasks.length} tasks done
