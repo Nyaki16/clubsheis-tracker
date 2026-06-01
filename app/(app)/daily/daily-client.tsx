@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Filter, Plus, Search, Star, X } from "lucide-react";
 import Modal from "@/components/modal";
 import { JobForm } from "@/components/forms";
@@ -47,7 +48,21 @@ export default function DailyClient({
   const [filterAssignee, setFilterAssignee] = useState("all");
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterDue, setFilterDue] = useState("all");
+  const searchParams = useSearchParams();
+  const [filterDue, setFilterDue] = useState(() => {
+    const due = searchParams.get("due");
+    return due === "overdue" || due === "today" || due === "week" || due === "no_date"
+      ? due
+      : "all";
+  });
+  // Re-sync if the URL changes (e.g. landing on /daily?due=overdue from a
+  // back/forward navigation that doesn't remount this component).
+  useEffect(() => {
+    const due = searchParams.get("due");
+    if (due === "overdue" || due === "today" || due === "week" || due === "no_date") {
+      setFilterDue(due);
+    }
+  }, [searchParams]);
   const [filterPriority, setFilterPriority] = useState<"all" | "top3">("all");
   const [hideClosed, setHideClosed] = useState(true);
   const [groupBy, setGroupBy] = useState<GroupBy>("assignee");

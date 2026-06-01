@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { TASK_STATUSES } from "@/lib/constants";
@@ -43,7 +44,12 @@ export default async function DashboardPage() {
         <Stat label="Active clients" value={clients.length} />
         <Stat label="Jobs in flight" value={jobs.filter((j) => j.stage !== "delivered").length} />
         <Stat label="Open tasks" value={openTasks.length} valueClass="text-amber-600" />
-        <Stat label="Overdue" value={overdueCount} valueClass="text-rose-600" />
+        <Stat
+          label="Overdue"
+          value={overdueCount}
+          valueClass="text-rose-600"
+          href="/daily?due=overdue"
+        />
       </div>
 
       {stuckReviews.length > 0 && (
@@ -131,15 +137,30 @@ function Stat({
   label,
   value,
   valueClass,
+  href,
 }: {
   label: string;
   value: number;
   valueClass?: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
+  const body = (
+    <>
       <div className={`text-3xl font-bold ${valueClass ?? ""}`}>{value}</div>
       <div className="text-sm text-slate-500 mt-1">{label}</div>
-    </div>
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="bg-white rounded-xl border border-slate-200 p-5 hover:border-slate-400 hover:shadow-sm transition block"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-5">{body}</div>
   );
 }
