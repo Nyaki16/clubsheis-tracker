@@ -51,7 +51,7 @@ export default function DailyClient({
   const [filterPriority, setFilterPriority] = useState<"all" | "top3">("all");
   const [hideClosed, setHideClosed] = useState(true);
   const [groupBy, setGroupBy] = useState<GroupBy>("assignee");
-  const [sortKey, setSortKey] = useState<SortKey>("due");
+  const [sortKey, setSortKey] = useState<SortKey>("client");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showNewJob, setShowNewJob] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -61,6 +61,12 @@ export default function DailyClient({
     try {
       const raw = localStorage.getItem("daily.collapsedGroups");
       if (raw) setCollapsedGroups(new Set(JSON.parse(raw)));
+      const sk = localStorage.getItem("daily.sortKey");
+      if (sk === "client" || sk === "task" || sk === "due" || sk === "status") {
+        setSortKey(sk);
+      }
+      const sd = localStorage.getItem("daily.sortDir");
+      if (sd === "asc" || sd === "desc") setSortDir(sd);
     } catch {}
   }, []);
 
@@ -72,6 +78,13 @@ export default function DailyClient({
       );
     } catch {}
   }, [collapsedGroups]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("daily.sortKey", sortKey);
+      localStorage.setItem("daily.sortDir", sortDir);
+    } catch {}
+  }, [sortKey, sortDir]);
 
   function toggleGroupCollapsed(key: string) {
     setCollapsedGroups((prev) => {
@@ -139,6 +152,11 @@ export default function DailyClient({
   const sortFn = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
     const statusOrder = new Map(TASK_STATUSES.map((s, i) => [s.id, i]));
+    // Stable tiebreaker — same primary value should always order by creation
+    // time so an edited row never trades places with a sibling on refresh.
+    const tieBreak = (a: Task, b: Task) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+
     return (a: Task, b: Task) => {
       // Top 3 priorities always float to the top, ranked 1 → 2 → 3.
       const ar = a.priority_rank;
@@ -162,14 +180,17 @@ export default function DailyClient({
         bv = statusOrder.get(b.status) ?? 99;
       } else {
         // due
-        if (!a.due_date && !b.due_date) return 0;
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return (new Date(a.due_date).getTime() - new Date(b.due_date).getTime()) * dir;
+        const ad = a.due_date ? new Date(a.due_date).getTime() : null;
+        const bd = b.due_date ? new Date(b.due_date).getTime() : null;
+        if (ad === null && bd === null) return tieBreak(a, b);
+        if (ad === null) return 1;
+        if (bd === null) return -1;
+        if (ad === bd) return tieBreak(a, b);
+        return (ad - bd) * dir;
       }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
-      return 0;
+      return tieBreak(a, b);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortKey, sortDir, jobs, clients]);

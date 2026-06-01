@@ -359,10 +359,14 @@ export function TaskGridRow({
     setPickingApprover(false);
     if (approverId === task.approver_id && task.sent_for_approval) return;
     justSavedRef.current = true;
+    // When sending for approval, also reassign the task to the approver so
+    // it shows up in their task list. When clearing the approver, leave the
+    // current assignee alone (it may have been a previous handoff).
     startTransition(() =>
       updateTask(task.id, {
         approver_id: approverId,
         sent_for_approval: approverId !== null,
+        ...(approverId !== null ? { assignee_id: approverId } : {}),
       })
     );
   }
