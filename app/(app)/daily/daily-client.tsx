@@ -44,23 +44,28 @@ export default function DailyClient({
   jobs: Job[];
   profiles: Profile[];
 }) {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [filterAssignee, setFilterAssignee] = useState("all");
+  const [filterAssignee, setFilterAssignee] = useState(() =>
+    searchParams.get("assignee") === "unassigned" ? "unassigned" : "all"
+  );
   const [filterClient, setFilterClient] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const searchParams = useSearchParams();
   const [filterDue, setFilterDue] = useState(() => {
     const due = searchParams.get("due");
     return due === "overdue" || due === "today" || due === "week" || due === "no_date"
       ? due
       : "all";
   });
-  // Re-sync if the URL changes (e.g. landing on /daily?due=overdue from a
-  // back/forward navigation that doesn't remount this component).
+  // Re-sync filters if the URL changes (e.g. landing on /daily?due=overdue
+  // or /daily?assignee=unassigned via a navigation that doesn't remount).
   useEffect(() => {
     const due = searchParams.get("due");
     if (due === "overdue" || due === "today" || due === "week" || due === "no_date") {
       setFilterDue(due);
+    }
+    if (searchParams.get("assignee") === "unassigned") {
+      setFilterAssignee("unassigned");
     }
   }, [searchParams]);
   const [filterPriority, setFilterPriority] = useState<"all" | "top3">("all");

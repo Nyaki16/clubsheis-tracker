@@ -105,26 +105,56 @@ export default async function DashboardPage() {
             {profiles.length === 0 ? (
               <p className="text-sm text-slate-400 italic">No team members yet.</p>
             ) : (
-              profiles.map((p) => {
-                const count = tasks.filter(
-                  (t) =>
-                    t.assignee_id === p.id &&
-                    t.status !== "closed_out" &&
-                    t.status !== "published"
-                ).length;
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar name={p.name} url={p.avatar_url} size="md" />
-                      <span className="text-sm">{p.name}</span>
+              <>
+                {profiles.map((p) => {
+                  const count = tasks.filter(
+                    (t) =>
+                      t.assignee_id === p.id &&
+                      t.status !== "closed_out" &&
+                      t.status !== "published"
+                  ).length;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar name={p.name} url={p.avatar_url} size="md" />
+                        <span className="text-sm">{p.name}</span>
+                      </div>
+                      <span className="font-semibold">{count}</span>
                     </div>
-                    <span className="font-semibold">{count}</span>
-                  </div>
-                );
-              })
+                  );
+                })}
+                {(() => {
+                  const unassignedCount = tasks.filter(
+                    (t) =>
+                      !t.assignee_id &&
+                      t.status !== "closed_out" &&
+                      t.status !== "published"
+                  ).length;
+                  return (
+                    <Link
+                      href="/daily?assignee=unassigned"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 border-t border-slate-100 pt-3 mt-1"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-sm font-semibold flex-shrink-0">
+                          ?
+                        </div>
+                        <span className="text-sm text-slate-600">Unassigned</span>
+                      </div>
+                      <span
+                        className={`font-semibold ${
+                          unassignedCount > 0 ? "text-rose-600" : "text-slate-400"
+                        }`}
+                      >
+                        {unassignedCount}
+                      </span>
+                    </Link>
+                  );
+                })()}
+              </>
             )}
           </div>
         </div>
