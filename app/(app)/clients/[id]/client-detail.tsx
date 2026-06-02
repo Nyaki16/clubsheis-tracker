@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   AtSign,
   Calendar,
@@ -13,15 +13,28 @@ import {
   Link as LinkIcon,
   Pencil,
   Plus,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import Modal from "@/components/modal";
-import { ClientProfileForm, TaskForm } from "@/components/forms";
+import { ClientDateForm, ClientProfileForm, TaskForm } from "@/components/forms";
+import {
+  createClientDate,
+  deleteClientDate,
+  updateClientDate,
+} from "@/app/actions/client-dates";
 import { TaskGridHeader, TaskGridRow } from "@/components/task-row";
 import BulkActionBar from "@/components/bulk-action-bar";
 import ProgressDonut from "@/components/progress-donut";
 import NewJobButton from "./new-job-button";
-import type { Client, ClientFlowDocs, Job, Profile, Task } from "@/lib/types";
+import type {
+  Client,
+  ClientDate,
+  ClientFlowDocs,
+  Job,
+  Profile,
+  Task,
+} from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { updateClient } from "@/app/actions/clients";
 import { createTask } from "@/app/actions/tasks";
@@ -68,12 +81,14 @@ export default function ClientDetail({
   jobs,
   tasks,
   profiles,
+  dates,
   clientFlowDocs,
 }: {
   client: Client;
   jobs: Job[];
   tasks: Task[];
   profiles: Profile[];
+  dates: ClientDate[];
   clientFlowDocs: ClientFlowDocs;
 }) {
   const [editingProfile, setEditingProfile] = useState(false);
@@ -294,6 +309,8 @@ export default function ClientDetail({
         )}
       </div>
 
+      <KeyDatesSection clientId={client.id} dates={dates} />
+
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold">Jobs</h3>
         <NewJobButton clientId={client.id} />
@@ -470,6 +487,128 @@ function JobTasksSection({
           />
         </Modal>
       )}
+    </div>
+  );
+}
+
+function KeyDatesSection({
+  clientId,
+  dates,
+}: {
+  clientId: string;
+  dates: ClientDate[];
+}) {
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<ClientDate | null>(null);
+
+  // Show upcoming first (today onward), then a "past" section if any.
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = dates.filter((d) => d.date >= today);
+  const past = dates.filter((d) => d.date < today).reverse();
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold">Key dates</h3>
+        <button
+          onClick={() => setAdding(true)}
+          className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add date
+        </button>
+      </div>
+
+      {dates.length === 0 ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500 italic">
+          No dates yet — launches, content drops, anniversaries…
+        </p>
+      ) : (
+        <div className="space-y-1">
+          {upcoming.map((d) => (
+            <DateRow key={d.id} d={d} onEdit={() => setEditing(d)} />
+          ))}
+          {upcoming.length > 0 && past.length > 0 && (
+            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+          )}
+          {past.map((d) => (
+            <DateRow key={d.id} d={d} onEdit={() => setEditing(d)} past />
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <Modal title="Add a date" onClose={() => setAdding(false)}>
+          <ClientDateForm
+            onSubmit={async (input) => {
+              await createClientDate(clientId, input);
+              setAdding(false);
+            }}
+          />
+        </Modal>
+      )}
+      {editing && (
+        <Modal title="Edit date" onClose={() => setEditing(null)}>
+          <ClientDateForm
+            initial={editing}
+            submitLabel="Save changes"
+            onSubmit={async (input) => {
+              await updateClientDate(editing.id, input);
+              setEditing(null);
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function DateRow({
+  d,
+  onEdit,
+  past = false,
+}: {
+  d: ClientDate;
+  onEdit: () => void;
+  past?: boolean;
+}) {
+  const [, startTransition] = useTransition();
+  const date = new Date(d.date + "T00:00:00");
+  return (
+    <div
+      className={`flex items-center gap-3 py-1.5 px-2 -mx-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 group ${
+        past ? "opacity-60" : ""
+      }`}
+    >
+      <div className="w-12 flex-shrink-0 text-center">
+        <div className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium">
+          {date.toLocaleDateString("en-ZA", { month: "short" })}
+        </div>
+        <div className="text-lg font-semibold leading-none">
+          {date.getDate()}
+        </div>
+      </div>
+      <button
+        onClick={onEdit}
+        className="flex-1 min-w-0 text-left"
+      >
+        <div className="text-sm font-medium truncate">{d.title}</div>
+        {d.notes && (
+          <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            {d.notes}
+          </div>
+        )}
+      </button>
+      <button
+        onClick={() => {
+          if (confirm(`Delete "${d.title}"?`)) {
+            startTransition(() => deleteClientDate(d.id));
+          }
+        }}
+        className="opacity-0 group-hover:opacity-100 text-slate-400 dark:text-slate-500 hover:text-rose-600 p-1"
+        aria-label="Delete date"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
     </div>
   );
 }

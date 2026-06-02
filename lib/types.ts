@@ -89,6 +89,21 @@ export type Task = {
   updated_at: string;
 };
 
+export type ClientDate = {
+  id: string;
+  client_id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  notes: string;
+  created_at: string;
+};
+
+export type ClientDateInput = {
+  title: string;
+  date: string;
+  notes?: string;
+};
+
 export type Deliverable = {
   id: string;
   job_id: string;

@@ -3,7 +3,15 @@
 import { useState, useTransition } from "react";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import { JOB_TEMPLATES } from "@/lib/job-templates";
-import type { Profile, Client, ClientProfileInput, Job, Task } from "@/lib/types";
+import type {
+  Profile,
+  Client,
+  ClientDate,
+  ClientDateInput,
+  ClientProfileInput,
+  Job,
+  Task,
+} from "@/lib/types";
 
 export function ClientForm({ onSubmit }: { onSubmit: (name: string) => Promise<void> }) {
   const [name, setName] = useState("");
@@ -599,6 +607,67 @@ export function ClientProfileForm({
         className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
       >
         {pending ? "Saving…" : "Save changes"}
+      </button>
+    </div>
+  );
+}
+
+export function ClientDateForm({
+  initial,
+  submitLabel,
+  onSubmit,
+}: {
+  initial?: ClientDate | null;
+  submitLabel?: string;
+  onSubmit: (input: ClientDateInput) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [date, setDate] = useState(initial?.date ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [pending, startTransition] = useTransition();
+
+  function submit() {
+    if (!title.trim() || !date) return;
+    startTransition(async () => {
+      await onSubmit({ title: title.trim(), date, notes: notes.trim() });
+    });
+  }
+
+  const input =
+    "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300";
+
+  return (
+    <div>
+      <label className="text-sm font-medium block mb-1.5">What</label>
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="e.g. Webinar live, launch day, Q3 review"
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        className={input + " mb-3"}
+      />
+      <label className="text-sm font-medium block mb-1.5">When</label>
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className={input + " mb-3"}
+      />
+      <label className="text-sm font-medium block mb-1.5">Notes (optional)</label>
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Anything you want to remember"
+        rows={3}
+        className={input + " mb-4 resize-none"}
+      />
+      <button
+        onClick={submit}
+        disabled={pending || !title.trim() || !date}
+        className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
+      >
+        {pending ? "Saving…" : submitLabel ?? "Add date"}
       </button>
     </div>
   );

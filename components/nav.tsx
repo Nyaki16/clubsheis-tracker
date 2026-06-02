@@ -12,6 +12,7 @@ const VIEWS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/pipeline", label: "Pipeline" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/team", label: "Team" },
 ];
 
