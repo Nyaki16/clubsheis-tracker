@@ -475,7 +475,8 @@ export function TaskGridRow({
     justSavedRef.current = true;
     // When sending for approval: stash the current assignee as the
     // originator so we know who to hand the task back to once approved.
-    // Then reassign to the approver so it lands in their task list.
+    // Reassign to the approver so it lands in their task list. Bump
+    // status to "In Review" so the pipeline reflects the handoff.
     // When clearing: leave the originator/assignee alone — undoing only
     // resets the approval flags, not who the task belongs to.
     if (approverId !== null) {
@@ -485,6 +486,7 @@ export function TaskGridRow({
           sent_for_approval: true,
           assignee_id: approverId,
           originator_id: task.originator_id ?? task.assignee_id ?? null,
+          status: "in_review",
         })
       );
     } else {
@@ -516,19 +518,28 @@ export function TaskGridRow({
   function toggleApproved() {
     justSavedRef.current = true;
     const nextApproved = !task.approved;
-    // When approving for the first time, hand the task back to whoever
-    // originally sent it for review. Clear the originator afterwards so a
-    // second round-trip would re-capture the new sender.
+    // When approving for the first time: hand the task back to whoever
+    // originally sent it for review, bump status to "Internally Reviewed",
+    // and clear the originator so a second round-trip captures the new
+    // sender.
     if (nextApproved && task.originator_id) {
       startTransition(() =>
         updateTask(task.id, {
           approved: true,
           assignee_id: task.originator_id,
           originator_id: null,
+          status: "internally_reviewed",
+        })
+      );
+    } else if (nextApproved) {
+      startTransition(() =>
+        updateTask(task.id, {
+          approved: true,
+          status: "internally_reviewed",
         })
       );
     } else {
-      startTransition(() => updateTask(task.id, { approved: nextApproved }));
+      startTransition(() => updateTask(task.id, { approved: false }));
     }
   }
 

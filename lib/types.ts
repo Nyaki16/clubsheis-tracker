@@ -75,6 +75,7 @@ export type Task = {
     | "planning"
     | "in_progress"
     | "in_review"
+    | "internally_reviewed"
     | "awaiting_client"
     | "published"
     | "closed_out";

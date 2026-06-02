@@ -58,7 +58,7 @@ export default function PipelineBoard({
           Tasks across all clients, by status. Drag a card to move it.
         </p>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         {TASK_STATUSES.map((status) => {
           const colTasks = tasks.filter((t) => t.status === status.id);
           const isHover = hoverCol === status.id;
