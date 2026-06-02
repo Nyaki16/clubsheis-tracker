@@ -112,6 +112,56 @@ export type ClientDateInput = {
   recurrence_until?: string | null;
 };
 
+export type Asset = {
+  id: string;
+  name: string;
+  category: string;
+  serial: string;
+  assigned_to: string | null;
+  purchased_on: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AssetInput = {
+  name: string;
+  category: string;
+  serial?: string;
+  assigned_to?: string | null;
+  purchased_on?: string | null;
+  notes?: string;
+};
+
+export type Sop = {
+  id: string;
+  title: string;
+  category: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SopInput = {
+  title: string;
+  category: string;
+  body: string;
+};
+
+export type VaultLink = {
+  id: string;
+  label: string;
+  url: string;
+  notes: string;
+  created_at: string;
+};
+
+export type VaultLinkInput = {
+  label: string;
+  url: string;
+  notes?: string;
+};
+
 export type Deliverable = {
   id: string;
   job_id: string;

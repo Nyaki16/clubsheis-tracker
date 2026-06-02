@@ -14,6 +14,7 @@ const VIEWS = [
   { href: "/pipeline", label: "Pipeline" },
   { href: "/calendar", label: "Calendar" },
   { href: "/team", label: "Team" },
+  { href: "/csi-home", label: "CSI Home" },
 ];
 
 export default function Nav({
