@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import type { Client, ClientDate } from "@/lib/types";
-import { expandDates } from "@/lib/recurrence";
+import { expandDates, formatTime } from "@/lib/recurrence";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = [
@@ -85,6 +85,15 @@ export default function CalendarBoard({
       if (!map.has(i.date)) map.set(i.date, []);
       map.get(i.date)!.push(i.source);
     });
+    // Sort each day: timed events first (by time), then all-day events.
+    map.forEach((list) =>
+      list.sort((a, b) => {
+        if (a.time && b.time) return a.time.localeCompare(b.time);
+        if (a.time) return -1;
+        if (b.time) return 1;
+        return a.title.localeCompare(b.title);
+      })
+    );
     return map;
   }, [visibleDates, grid]);
 
@@ -231,7 +240,9 @@ export default function CalendarBoard({
                           borderColor: (client?.color ?? "#64748b") + "55",
                           color: "var(--page-text)",
                         }}
-                        title={`${evt.title}${client ? ` — ${client.name}` : ""}${
+                        title={`${evt.title}${
+                          evt.time ? ` at ${formatTime(evt.time)}` : ""
+                        }${client ? ` — ${client.name}` : ""}${
                           evt.recurrence !== "none" ? ` (${evt.recurrence})` : ""
                         }${evt.notes ? `\n${evt.notes}` : ""}`}
                       >
@@ -239,6 +250,11 @@ export default function CalendarBoard({
                           className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
                           style={{ backgroundColor: client?.color ?? "#64748b" }}
                         />
+                        {evt.time && (
+                          <span className="font-medium tabular-nums flex-shrink-0 opacity-80">
+                            {formatTime(evt.time)}
+                          </span>
+                        )}
                         <span className="truncate flex-1 min-w-0">{evt.title}</span>
                         {evt.recurrence !== "none" && (
                           <Repeat className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />

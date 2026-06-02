@@ -632,6 +632,10 @@ export function ClientDateForm({
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [date, setDate] = useState(initial?.date ?? "");
+  // Postgres `time` round-trips as HH:MM:SS — trim to HH:MM for the input.
+  const [time, setTime] = useState(
+    initial?.time ? initial.time.slice(0, 5) : ""
+  );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [recurrence, setRecurrence] = useState<Recurrence>(
     initial?.recurrence ?? "none"
@@ -647,6 +651,7 @@ export function ClientDateForm({
       await onSubmit({
         title: title.trim(),
         date,
+        time: time || null,
         notes: notes.trim(),
         recurrence,
         recurrence_until: recurrence === "none" ? null : recurrenceUntil || null,
@@ -668,13 +673,28 @@ export function ClientDateForm({
         onKeyDown={(e) => e.key === "Enter" && submit()}
         className={input + " mb-3"}
       />
-      <label className="text-sm font-medium block mb-1.5">When</label>
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className={input + " mb-3"}
-      />
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1.5">
+            Time <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+          </label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className={input}
+          />
+        </div>
+      </div>
 
       <label className="text-sm font-medium block mb-1.5">Repeats</label>
       <select

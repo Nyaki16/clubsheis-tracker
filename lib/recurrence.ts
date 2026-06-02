@@ -92,3 +92,17 @@ export function recurrenceLabel(r: Recurrence): string {
       return "";
   }
 }
+
+// "14:30:00" or "14:30" → "2:30 PM". Empty/null → "".
+export function formatTime(t: string | null | undefined): string {
+  if (!t) return "";
+  const [hStr, mStr] = t.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr ?? "0");
+  if (Number.isNaN(h) || Number.isNaN(m)) return "";
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0
+    ? `${h12} ${ampm}`
+    : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}

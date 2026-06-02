@@ -16,7 +16,7 @@ import {
   Repeat,
   Trash2,
 } from "lucide-react";
-import { recurrenceLabel } from "@/lib/recurrence";
+import { formatTime, recurrenceLabel } from "@/lib/recurrence";
 import Link from "next/link";
 import Modal from "@/components/modal";
 import { ClientDateForm, ClientProfileForm, TaskForm } from "@/components/forms";
@@ -601,6 +601,11 @@ function DateRow({
       >
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-sm font-medium truncate">{d.title}</span>
+          {d.time && (
+            <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">
+              · {formatTime(d.time)}
+            </span>
+          )}
           {d.recurrence !== "none" && (
             <span
               className="text-[10px] uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0"

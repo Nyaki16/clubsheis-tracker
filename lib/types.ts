@@ -96,6 +96,7 @@ export type ClientDate = {
   client_id: string;
   title: string;
   date: string; // YYYY-MM-DD
+  time: string | null; // HH:MM (24h) or null for all-day
   notes: string;
   recurrence: Recurrence;
   recurrence_until: string | null; // YYYY-MM-DD
@@ -105,6 +106,7 @@ export type ClientDate = {
 export type ClientDateInput = {
   title: string;
   date: string;
+  time?: string | null;
   notes?: string;
   recurrence?: Recurrence;
   recurrence_until?: string | null;

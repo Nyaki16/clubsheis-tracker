@@ -9,6 +9,7 @@ function clean(input: ClientDateInput) {
   return {
     title: input.title.trim(),
     date: input.date,
+    time: input.time ? input.time : null,
     notes: input.notes?.trim() ?? "",
     recurrence,
     recurrence_until:
