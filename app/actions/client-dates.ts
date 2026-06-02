@@ -5,10 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import type { ClientDateInput } from "@/lib/types";
 
 function clean(input: ClientDateInput) {
+  const recurrence = input.recurrence ?? "none";
   return {
     title: input.title.trim(),
     date: input.date,
     notes: input.notes?.trim() ?? "",
+    recurrence,
+    recurrence_until:
+      recurrence === "none" ? null : input.recurrence_until || null,
   };
 }
 

@@ -89,12 +89,16 @@ export type Task = {
   updated_at: string;
 };
 
+export type Recurrence = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
 export type ClientDate = {
   id: string;
   client_id: string;
   title: string;
   date: string; // YYYY-MM-DD
   notes: string;
+  recurrence: Recurrence;
+  recurrence_until: string | null; // YYYY-MM-DD
   created_at: string;
 };
 
@@ -102,6 +106,8 @@ export type ClientDateInput = {
   title: string;
   date: string;
   notes?: string;
+  recurrence?: Recurrence;
+  recurrence_until?: string | null;
 };
 
 export type Deliverable = {

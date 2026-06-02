@@ -10,6 +10,7 @@ import type {
   ClientDateInput,
   ClientProfileInput,
   Job,
+  Recurrence,
   Task,
 } from "@/lib/types";
 
@@ -612,6 +613,14 @@ export function ClientProfileForm({
   );
 }
 
+const RECURRENCE_LABELS: Record<Recurrence, string> = {
+  none: "Doesn't repeat",
+  daily: "Every day",
+  weekly: "Every week",
+  monthly: "Every month",
+  yearly: "Every year",
+};
+
 export function ClientDateForm({
   initial,
   submitLabel,
@@ -624,12 +633,24 @@ export function ClientDateForm({
   const [title, setTitle] = useState(initial?.title ?? "");
   const [date, setDate] = useState(initial?.date ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [recurrence, setRecurrence] = useState<Recurrence>(
+    initial?.recurrence ?? "none"
+  );
+  const [recurrenceUntil, setRecurrenceUntil] = useState(
+    initial?.recurrence_until ?? ""
+  );
   const [pending, startTransition] = useTransition();
 
   function submit() {
     if (!title.trim() || !date) return;
     startTransition(async () => {
-      await onSubmit({ title: title.trim(), date, notes: notes.trim() });
+      await onSubmit({
+        title: title.trim(),
+        date,
+        notes: notes.trim(),
+        recurrence,
+        recurrence_until: recurrence === "none" ? null : recurrenceUntil || null,
+      });
     });
   }
 
@@ -654,6 +675,38 @@ export function ClientDateForm({
         onChange={(e) => setDate(e.target.value)}
         className={input + " mb-3"}
       />
+
+      <label className="text-sm font-medium block mb-1.5">Repeats</label>
+      <select
+        value={recurrence}
+        onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+        className={input + " mb-3"}
+      >
+        {(Object.keys(RECURRENCE_LABELS) as Recurrence[]).map((r) => (
+          <option key={r} value={r}>
+            {RECURRENCE_LABELS[r]}
+          </option>
+        ))}
+      </select>
+
+      {recurrence !== "none" && (
+        <>
+          <label className="text-sm font-medium block mb-1.5">
+            Until (optional)
+          </label>
+          <input
+            type="date"
+            value={recurrenceUntil}
+            onChange={(e) => setRecurrenceUntil(e.target.value)}
+            min={date}
+            className={input + " mb-1"}
+          />
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+            Leave blank to repeat forever.
+          </p>
+        </>
+      )}
+
       <label className="text-sm font-medium block mb-1.5">Notes (optional)</label>
       <textarea
         value={notes}

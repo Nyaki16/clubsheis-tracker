@@ -13,8 +13,10 @@ import {
   Link as LinkIcon,
   Pencil,
   Plus,
+  Repeat,
   Trash2,
 } from "lucide-react";
+import { recurrenceLabel } from "@/lib/recurrence";
 import Link from "next/link";
 import Modal from "@/components/modal";
 import { ClientDateForm, ClientProfileForm, TaskForm } from "@/components/forms";
@@ -503,8 +505,14 @@ function KeyDatesSection({
 
   // Show upcoming first (today onward), then a "past" section if any.
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = dates.filter((d) => d.date >= today);
-  const past = dates.filter((d) => d.date < today).reverse();
+  // Recurring rules stay in "upcoming" as long as they aren't ended.
+  const isPast = (d: ClientDate) => {
+    if (d.recurrence === "none") return d.date < today;
+    if (d.recurrence_until && d.recurrence_until < today) return true;
+    return false;
+  };
+  const upcoming = dates.filter((d) => !isPast(d));
+  const past = dates.filter((d) => isPast(d)).reverse();
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
@@ -591,7 +599,22 @@ function DateRow({
         onClick={onEdit}
         className="flex-1 min-w-0 text-left"
       >
-        <div className="text-sm font-medium truncate">{d.title}</div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm font-medium truncate">{d.title}</span>
+          {d.recurrence !== "none" && (
+            <span
+              className="text-[10px] uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0"
+              title={
+                d.recurrence_until
+                  ? `${recurrenceLabel(d.recurrence)} until ${d.recurrence_until}`
+                  : `${recurrenceLabel(d.recurrence)} (no end)`
+              }
+            >
+              <Repeat className="w-2.5 h-2.5" />
+              {recurrenceLabel(d.recurrence)}
+            </span>
+          )}
+        </div>
         {d.notes && (
           <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
             {d.notes}

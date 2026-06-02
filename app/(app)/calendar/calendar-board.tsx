@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import type { Client, ClientDate } from "@/lib/types";
+import { expandDates } from "@/lib/recurrence";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = [
@@ -59,15 +60,6 @@ export default function CalendarBoard({
     return dates.filter((d) => picked.has(d.client_id));
   }, [dates, picked]);
 
-  const datesByDay = useMemo(() => {
-    const map = new Map<string, ClientDate[]>();
-    visibleDates.forEach((d) => {
-      if (!map.has(d.date)) map.set(d.date, []);
-      map.get(d.date)!.push(d);
-    });
-    return map;
-  }, [visibleDates]);
-
   // Build a 6-week grid covering the visible month.
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -81,6 +73,20 @@ export default function CalendarBoard({
     }
     return days;
   }, [cursor]);
+
+  // Expand recurring rows into concrete instances within the visible grid.
+  const datesByDay = useMemo(() => {
+    if (grid.length === 0) return new Map<string, ClientDate[]>();
+    const start = grid[0];
+    const end = grid[grid.length - 1];
+    const instances = expandDates(visibleDates, start, end);
+    const map = new Map<string, ClientDate[]>();
+    instances.forEach((i) => {
+      if (!map.has(i.date)) map.set(i.date, []);
+      map.get(i.date)!.push(i.source);
+    });
+    return map;
+  }, [visibleDates, grid]);
 
   function togglePicked(id: string) {
     setPicked((prev) => {
@@ -217,23 +223,26 @@ export default function CalendarBoard({
                     const client = clientById.get(evt.client_id);
                     return (
                       <Link
-                        key={evt.id}
+                        key={`${evt.id}-${key}`}
                         href={`/clients/${evt.client_id}`}
-                        className="block text-[10px] px-1.5 py-0.5 rounded truncate border"
+                        className="flex items-center text-[10px] px-1.5 py-0.5 rounded truncate border gap-1"
                         style={{
                           backgroundColor: (client?.color ?? "#64748b") + "22",
                           borderColor: (client?.color ?? "#64748b") + "55",
                           color: "var(--page-text)",
                         }}
                         title={`${evt.title}${client ? ` — ${client.name}` : ""}${
-                          evt.notes ? `\n${evt.notes}` : ""
-                        }`}
+                          evt.recurrence !== "none" ? ` (${evt.recurrence})` : ""
+                        }${evt.notes ? `\n${evt.notes}` : ""}`}
                       >
                         <span
-                          className="inline-block w-1.5 h-1.5 rounded-full mr-1"
+                          className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
                           style={{ backgroundColor: client?.color ?? "#64748b" }}
                         />
-                        {evt.title}
+                        <span className="truncate flex-1 min-w-0">{evt.title}</span>
+                        {evt.recurrence !== "none" && (
+                          <Repeat className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />
+                        )}
                       </Link>
                     );
                   })}
