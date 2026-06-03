@@ -437,19 +437,27 @@ function PersonalInfoForm({
   function save() {
     setMsg(null);
     startSaving(async () => {
-      const res = await updateProfileFields(profile.id, {
-        name,
-        surname,
-        cellphone,
-        home_address: homeAddress,
-        next_of_kin: nextOfKin,
-        next_of_kin_phone: nokPhone,
-        job_title: jobTitle,
-        start_date: startDate || null,
-        ...(isAdmin ? { annual_leave_allowance: Number(allowance) } : {}),
-      });
-      setMsg({ ok: res.ok, text: res.message });
-      if (res.ok) setTimeout(onDone, 600);
+      try {
+        const res = await updateProfileFields(profile.id, {
+          name,
+          surname,
+          cellphone,
+          home_address: homeAddress,
+          next_of_kin: nextOfKin,
+          next_of_kin_phone: nokPhone,
+          job_title: jobTitle,
+          start_date: startDate || null,
+          ...(isAdmin ? { annual_leave_allowance: Number(allowance) } : {}),
+        });
+        setMsg({ ok: res.ok, text: res.message });
+        if (res.ok) setTimeout(onDone, 600);
+      } catch (e) {
+        const raw = e instanceof Error ? e.message : "Save failed.";
+        const friendly = /Server Components render|digest/i.test(raw)
+          ? "Something went wrong on the server. Try refreshing the page."
+          : raw;
+        setMsg({ ok: false, text: friendly });
+      }
     });
   }
 

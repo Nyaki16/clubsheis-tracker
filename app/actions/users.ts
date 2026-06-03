@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type {
-  LeaveRequestInput,
-  LeaveStatus,
-  ProfileFields,
-} from "@/lib/types";
+import type { LeaveRequestInput, ProfileFields } from "@/lib/types";
 
 export type InviteResult =
   | { ok: true; message: string }
@@ -91,10 +87,20 @@ export async function updateProfileFields(
     .eq("id", profileId);
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/csi-home");
-  revalidatePath(`/csi-home/team/${profileId}`);
-  revalidatePath("/team");
-  revalidatePath("/profile");
+  // Revalidate the pages that show profile data. Wrapped so a per-path
+  // failure can't block the action from returning successfully.
+  for (const p of [
+    "/csi-home",
+    `/csi-home/team/${profileId}`,
+    "/team",
+    "/profile",
+  ]) {
+    try {
+      revalidatePath(p);
+    } catch {
+      // swallow — caller doesn't care, the save succeeded
+    }
+  }
   return { ok: true, message: "Saved." };
 }
 
