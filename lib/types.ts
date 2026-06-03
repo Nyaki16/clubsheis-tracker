@@ -138,6 +138,7 @@ export type Sop = {
   title: string;
   category: string;
   body: string;
+  url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -146,6 +147,7 @@ export type SopInput = {
   title: string;
   category: string;
   body: string;
+  url?: string | null;
 };
 
 export type VaultLink = {

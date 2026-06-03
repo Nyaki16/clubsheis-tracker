@@ -50,10 +50,12 @@ export async function deleteAsset(id: string) {
 // ── SOPs ──────────────────────────────────────────────────────────────────
 
 function cleanSop(input: SopInput) {
+  const url = (input.url ?? "").trim();
   return {
     title: input.title.trim(),
     category: (input.category ?? "").trim(),
     body: input.body ?? "",
+    url: url || null,
   };
 }
 
