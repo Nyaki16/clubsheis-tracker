@@ -59,7 +59,7 @@ export default function CsiHome({
   const tabs: { id: Tab; label: string; count: number; Icon: typeof Laptop }[] = [
     { id: "assets", label: "Asset Register", count: assets.length, Icon: Laptop },
     { id: "sops", label: "SOPs", count: sops.length, Icon: BookOpen },
-    { id: "vault", label: "Vault links", count: vaultLinks.length, Icon: KeyRound },
+    { id: "vault", label: "Wordpass", count: vaultLinks.length, Icon: KeyRound },
     { id: "hr", label: "HR / Team", count: hrCount, Icon: Users },
   ];
 
@@ -684,7 +684,7 @@ function VaultPanel({ links }: { links: VaultLink[] }) {
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-700">
         <div>
-          <h3 className="font-semibold">Vault links</h3>
+          <h3 className="font-semibold">Wordpass</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Labels and links to entries in your real password manager —{" "}
             <strong>not</strong> the passwords themselves.
@@ -699,8 +699,8 @@ function VaultPanel({ links }: { links: VaultLink[] }) {
       </div>
       {links.length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500 italic px-5 py-8 text-center">
-          No vault links yet. Paste links to 1Password, Bitwarden, or shared
-          credentials.
+          No Wordpass entries yet. Paste links to 1Password, Bitwarden, or
+          shared credentials.
         </p>
       ) : (
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -751,7 +751,7 @@ function VaultPanel({ links }: { links: VaultLink[] }) {
       )}
 
       {showNew && (
-        <Modal title="Add vault link" onClose={() => setShowNew(false)}>
+        <Modal title="Add Wordpass entry" onClose={() => setShowNew(false)}>
           <VaultForm
             onSubmit={async (input) => {
               await createVaultLink(input);
@@ -761,7 +761,7 @@ function VaultPanel({ links }: { links: VaultLink[] }) {
         </Modal>
       )}
       {editing && (
-        <Modal title="Edit vault link" onClose={() => setEditing(null)}>
+        <Modal title="Edit Wordpass entry" onClose={() => setEditing(null)}>
           <VaultForm
             initial={editing}
             submitLabel="Save changes"
