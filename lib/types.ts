@@ -165,6 +165,11 @@ export type Asset = {
   assigned_to: string | null;
   purchased_on: string | null;
   notes: string;
+  model: string | null;
+  processor: string | null;
+  memory: string | null;
+  os: string | null;
+  graphics: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -176,6 +181,11 @@ export type AssetInput = {
   assigned_to?: string | null;
   purchased_on?: string | null;
   notes?: string;
+  model?: string | null;
+  processor?: string | null;
+  memory?: string | null;
+  os?: string | null;
+  graphics?: string | null;
 };
 
 export type Sop = {

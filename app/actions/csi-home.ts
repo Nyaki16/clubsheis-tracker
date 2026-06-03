@@ -9,6 +9,8 @@ const HOME = "/csi-home";
 // ── Assets ────────────────────────────────────────────────────────────────
 
 function cleanAsset(input: AssetInput) {
+  const trim = (v: string | null | undefined) =>
+    v && v.trim() ? v.trim() : null;
   return {
     name: input.name.trim(),
     category: (input.category ?? "other").trim() || "other",
@@ -16,6 +18,11 @@ function cleanAsset(input: AssetInput) {
     assigned_to: input.assigned_to ?? null,
     purchased_on: input.purchased_on || null,
     notes: (input.notes ?? "").trim(),
+    model: trim(input.model),
+    processor: trim(input.processor),
+    memory: trim(input.memory),
+    os: trim(input.os),
+    graphics: trim(input.graphics),
   };
 }
 

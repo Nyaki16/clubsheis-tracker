@@ -142,41 +142,25 @@ function AssetsPanel({
           No assets yet — laptops, cameras, mics, etc.
         </p>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="hidden md:grid grid-cols-12 gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium bg-slate-50 dark:bg-slate-800/40">
-            <div className="col-span-3">Asset</div>
-            <div className="col-span-2">Category</div>
-            <div className="col-span-2">Serial</div>
-            <div className="col-span-2">Assigned to</div>
-            <div className="col-span-2">Purchased</div>
-            <div className="col-span-1" />
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1.5fr_1.5fr_1.5fr_auto] gap-3 px-5 py-2 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 font-medium bg-slate-50 dark:bg-slate-800/40 min-w-[1100px]">
+            <div>Device Owner</div>
+            <div>Model</div>
+            <div>Processor</div>
+            <div>Memory</div>
+            <div>Serial Number</div>
+            <div>OS</div>
+            <div>Graphics</div>
+            <div className="w-16" />
           </div>
           {assets.map((a) => {
             const p = a.assigned_to ? profilesById.get(a.assigned_to) : null;
             return (
               <div
                 key={a.id}
-                className="grid grid-cols-1 md:grid-cols-12 gap-3 px-5 py-3 group items-center hover:bg-slate-50 dark:hover:bg-slate-800"
+                className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1fr_1.5fr_1.5fr_1.5fr_auto] gap-3 px-5 py-3 group items-center hover:bg-slate-50 dark:hover:bg-slate-800 min-w-[1100px]"
               >
-                <div className="md:col-span-3 min-w-0">
-                  <div className="font-medium truncate">{a.name}</div>
-                  {a.notes && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                      {a.notes}
-                    </div>
-                  )}
-                </div>
-                <div className="md:col-span-2 text-sm text-slate-600 dark:text-slate-300 truncate">
-                  {a.category}
-                </div>
-                <div className="md:col-span-2 text-sm text-slate-600 dark:text-slate-300 truncate font-mono">
-                  {a.serial || (
-                    <span className="text-slate-400 dark:text-slate-500 italic font-sans">
-                      —
-                    </span>
-                  )}
-                </div>
-                <div className="md:col-span-2 min-w-0">
+                <div className="min-w-0">
                   {p ? (
                     <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 min-w-0">
                       <Avatar name={p.name} url={p.avatar_url} size="sm" />
@@ -188,12 +172,22 @@ function AssetsPanel({
                     </span>
                   )}
                 </div>
-                <div className="md:col-span-2 text-sm text-slate-600 dark:text-slate-300">
-                  {a.purchased_on ?? (
-                    <span className="text-slate-400 dark:text-slate-500 italic">—</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {a.model ?? a.name}
+                  </div>
+                  {a.category && a.category !== "other" && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {a.category}
+                    </div>
                   )}
                 </div>
-                <div className="md:col-span-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 justify-end">
+                <Cell value={a.processor} />
+                <Cell value={a.memory} />
+                <Cell value={a.serial} mono />
+                <Cell value={a.os} />
+                <Cell value={a.graphics} />
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 justify-end w-16">
                   <button
                     onClick={() => setEditing(a)}
                     className="text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white p-1"
@@ -203,7 +197,7 @@ function AssetsPanel({
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`Delete "${a.name}"?`)) {
+                      if (confirm(`Delete "${a.model ?? a.name}"?`)) {
                         startTransition(() => deleteAsset(a.id));
                       }
                     }}
@@ -258,24 +252,36 @@ function AssetForm({
   submitLabel?: string;
   onSubmit: (input: AssetInput) => Promise<void>;
 }) {
-  const [name, setName] = useState(initial?.name ?? "");
+  const [model, setModel] = useState(initial?.model ?? initial?.name ?? "");
   const [category, setCategory] = useState(initial?.category ?? "Laptop");
+  const [processor, setProcessor] = useState(initial?.processor ?? "");
+  const [memory, setMemory] = useState(initial?.memory ?? "");
   const [serial, setSerial] = useState(initial?.serial ?? "");
+  const [os, setOs] = useState(initial?.os ?? "");
+  const [graphics, setGraphics] = useState(initial?.graphics ?? "");
   const [assignedTo, setAssignedTo] = useState(initial?.assigned_to ?? "");
   const [purchasedOn, setPurchasedOn] = useState(initial?.purchased_on ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [pending, startTransition] = useTransition();
 
   function submit() {
-    if (!name.trim()) return;
+    const trimmedModel = model.trim();
+    if (!trimmedModel) return;
     startTransition(async () => {
       await onSubmit({
-        name: name.trim(),
+        // The DB still requires `name` — mirror Model into it so existing
+        // queries keep working, while the UI treats Model as primary.
+        name: trimmedModel,
         category: category.trim() || "other",
         serial: serial.trim(),
         assigned_to: assignedTo || null,
         purchased_on: purchasedOn || null,
         notes: notes.trim(),
+        model: trimmedModel,
+        processor: processor.trim() || null,
+        memory: memory.trim() || null,
+        os: os.trim() || null,
+        graphics: graphics.trim() || null,
       });
     });
   }
@@ -284,16 +290,18 @@ function AssetForm({
     "w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-slate-300";
 
   return (
-    <div>
-      <label className="text-sm font-medium block mb-1.5">Name</label>
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. MacBook Pro 16, Sony A7IV"
-        className={input + " mb-3"}
-      />
-      <div className="grid grid-cols-2 gap-3 mb-3">
+    <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Model</label>
+          <input
+            autoFocus
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="e.g. MacBook Pro 16 (M2 Pro, 2023)"
+            className={input}
+          />
+        </div>
         <div>
           <label className="text-sm font-medium block mb-1.5">Category</label>
           <input
@@ -303,19 +311,11 @@ function AssetForm({
             className={input}
           />
         </div>
-        <div>
-          <label className="text-sm font-medium block mb-1.5">Serial / tag</label>
-          <input
-            value={serial}
-            onChange={(e) => setSerial(e.target.value)}
-            placeholder="Optional"
-            className={input}
-          />
-        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 mb-3">
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-sm font-medium block mb-1.5">Assigned to</label>
+          <label className="text-sm font-medium block mb-1.5">Device owner</label>
           <select
             value={assignedTo}
             onChange={(e) => setAssignedTo(e.target.value)}
@@ -330,30 +330,102 @@ function AssetForm({
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium block mb-1.5">Purchased on</label>
+          <label className="text-sm font-medium block mb-1.5">Serial number</label>
           <input
-            type="date"
-            value={purchasedOn}
-            onChange={(e) => setPurchasedOn(e.target.value)}
+            value={serial}
+            onChange={(e) => setSerial(e.target.value)}
+            placeholder="C02XXXXXX"
             className={input}
           />
         </div>
       </div>
-      <label className="text-sm font-medium block mb-1.5">Notes (optional)</label>
-      <textarea
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Where it lives, condition, warranty…"
-        rows={3}
-        className={input + " mb-4 resize-none"}
-      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Processor</label>
+          <input
+            value={processor}
+            onChange={(e) => setProcessor(e.target.value)}
+            placeholder="Apple M2 Pro 12-core"
+            className={input}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Memory</label>
+          <input
+            value={memory}
+            onChange={(e) => setMemory(e.target.value)}
+            placeholder="32 GB"
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium block mb-1.5">OS</label>
+          <input
+            value={os}
+            onChange={(e) => setOs(e.target.value)}
+            placeholder="macOS Sonoma 14.5"
+            className={input}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1.5">Graphics</label>
+          <input
+            value={graphics}
+            onChange={(e) => setGraphics(e.target.value)}
+            placeholder="19-core GPU"
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium block mb-1.5">Purchased on</label>
+        <input
+          type="date"
+          value={purchasedOn}
+          onChange={(e) => setPurchasedOn(e.target.value)}
+          className={input}
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium block mb-1.5">Notes (optional)</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Where it lives, condition, warranty…"
+          rows={3}
+          className={input + " resize-none"}
+        />
+      </div>
+
       <button
         onClick={submit}
-        disabled={pending || !name.trim()}
+        disabled={pending || !model.trim()}
         className="w-full bg-slate-900 text-white py-2 rounded-lg font-medium text-sm hover:bg-slate-800 disabled:opacity-60"
       >
         {pending ? "Saving…" : submitLabel ?? "Add asset"}
       </button>
+    </div>
+  );
+}
+
+function Cell({ value, mono = false }: { value: string | null; mono?: boolean }) {
+  return (
+    <div
+      className={`text-sm text-slate-600 dark:text-slate-300 truncate ${
+        mono ? "font-mono" : ""
+      }`}
+    >
+      {value || (
+        <span className="text-slate-400 dark:text-slate-500 italic font-sans">
+          —
+        </span>
+      )}
     </div>
   );
 }
