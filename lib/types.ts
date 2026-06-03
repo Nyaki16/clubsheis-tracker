@@ -130,6 +130,7 @@ export type Task = {
   approver_id: string | null;
   approved: boolean;
   originator_id: string | null;
+  leave_request_id: string | null;
   created_at: string;
   updated_at: string;
 };

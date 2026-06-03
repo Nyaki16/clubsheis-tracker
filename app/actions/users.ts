@@ -167,6 +167,10 @@ export async function uploadIdDocument(
 
 // ── Leave requests ───────────────────────────────────────────────────────
 
+// Reserved IDs created by migration 0019. All system-generated approval
+// tasks attach to this job so they appear in the daily task tracker.
+const HR_APPROVAL_JOB_ID = "00000000-0000-0000-0000-000000000002";
+
 export async function createLeaveRequest(
   input: LeaveRequestInput,
   requesterId?: string
@@ -174,8 +178,6 @@ export async function createLeaveRequest(
   const me = await getMe();
   if (!me) return { ok: false, message: "Not signed in." };
 
-  // Default to filing for the signed-in user. Admins can file on behalf of
-  // anyone else by passing their profile id.
   const target = requesterId ?? me.id;
   if (target !== me.id && !me.isAdmin) {
     return { ok: false, message: "You can only file leave for yourself." };
@@ -193,18 +195,65 @@ export async function createLeaveRequest(
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("leave_requests").insert({
-    requester_id: target,
-    start_date: start,
-    end_date: end,
-    days,
-    reason: (input.reason ?? "").trim(),
-    status: "pending",
-  });
-  if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/csi-home");
-  revalidatePath(`/csi-home/team/${target}`);
+  // 1) Create the leave request and grab its id.
+  const { data: created, error } = await admin
+    .from("leave_requests")
+    .insert({
+      requester_id: target,
+      start_date: start,
+      end_date: end,
+      days,
+      reason: (input.reason ?? "").trim(),
+      status: "pending",
+    })
+    .select("id")
+    .single();
+  if (error || !created) {
+    return { ok: false, message: error?.message ?? "Could not save request." };
+  }
+
+  // 2) Fan out an approval task to every admin so it lands in their daily
+  //    task list. The task is linked back to the leave_request via FK so
+  //    decide/cancel can auto-close them.
+  try {
+    const [{ data: admins }, { data: requesterRow }] = await Promise.all([
+      admin.from("profiles").select("id").eq("is_admin", true),
+      admin.from("profiles").select("name, surname").eq("id", target).single(),
+    ]);
+    const fullName = `${requesterRow?.name ?? "Someone"}${
+      requesterRow?.surname ? ` ${requesterRow.surname}` : ""
+    }`;
+    const dateRange =
+      start === end ? start : `${start} → ${end}`;
+    const reason = (input.reason ?? "").trim();
+
+    if (admins && admins.length > 0) {
+      const tasksToInsert = admins.map((a) => ({
+        job_id: HR_APPROVAL_JOB_ID,
+        title: `Approve leave: ${fullName} — ${dateRange}`,
+        notes:
+          `${days} ${days === 1 ? "day" : "days"} requested.` +
+          (reason ? ` Reason: ${reason}.` : "") +
+          `\nApprove in CSI Home → ${fullName}'s profile.`,
+        assignee_id: a.id,
+        status: "in_review",
+        leave_request_id: created.id,
+        sent_for_approval: false,
+        approver_id: null,
+        approved: false,
+      }));
+      await admin.from("tasks").insert(tasksToInsert);
+    }
+  } catch {
+    // Don't block the request if task creation hiccups.
+  }
+
+  for (const p of ["/csi-home", `/csi-home/team/${target}`, "/daily", "/pipeline"]) {
+    try {
+      revalidatePath(p);
+    } catch {}
+  }
   return { ok: true, message: "Leave request sent." };
 }
 
@@ -231,7 +280,20 @@ export async function decideLeaveRequest(
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/csi-home");
+  // Close out the per-admin approval tasks that were created when this
+  // leave request was filed.
+  try {
+    await admin
+      .from("tasks")
+      .update({ status: "closed_out" })
+      .eq("leave_request_id", id);
+  } catch {}
+
+  for (const p of ["/csi-home", "/daily", "/pipeline"]) {
+    try {
+      revalidatePath(p);
+    } catch {}
+  }
   return { ok: true, message: `Leave ${decision}.` };
 }
 
@@ -259,7 +321,18 @@ export async function cancelLeaveRequest(id: string): Promise<InviteResult> {
     .eq("id", id);
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/csi-home");
+  try {
+    await admin
+      .from("tasks")
+      .update({ status: "closed_out" })
+      .eq("leave_request_id", id);
+  } catch {}
+
+  for (const p of ["/csi-home", "/daily", "/pipeline"]) {
+    try {
+      revalidatePath(p);
+    } catch {}
+  }
   return { ok: true, message: "Request cancelled." };
 }
 

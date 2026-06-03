@@ -43,10 +43,19 @@ function ymd(s: string | null) {
   return s ?? "";
 }
 
-function daysBetween(start: string, end: string): number {
+// Inclusive, weekdays only (Mon-Fri). Weekend days don't count toward leave.
+function workingDaysBetween(start: string, end: string): number {
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
-  return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86_400_000) + 1);
+  if (e < s) return 0;
+  let count = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
 }
 
 export default function PersonDetail({
@@ -655,7 +664,8 @@ function LeaveRequestForm({
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const computedDays = start && end ? daysBetween(start, end) : 0;
+  const computedDays =
+    start && end ? workingDaysBetween(start, end) : 0;
   const [daysOverride, setDaysOverride] = useState<string>("");
   const days = daysOverride
     ? Number(daysOverride)
@@ -668,17 +678,25 @@ function LeaveRequestForm({
       return;
     }
     startTransition(async () => {
-      const res = await createLeaveRequest(
-        {
-          start_date: start,
-          end_date: end,
-          days,
-          reason,
-        },
-        requesterId
-      );
-      setMsg({ ok: res.ok, text: res.message });
-      if (res.ok) setTimeout(onDone, 600);
+      try {
+        const res = await createLeaveRequest(
+          {
+            start_date: start,
+            end_date: end,
+            days,
+            reason,
+          },
+          requesterId
+        );
+        setMsg({ ok: res.ok, text: res.message });
+        if (res.ok) setTimeout(onDone, 600);
+      } catch (e) {
+        const raw = e instanceof Error ? e.message : "Send failed.";
+        const friendly = /Server Components render|digest/i.test(raw)
+          ? "Something went wrong on the server. Try refreshing the page."
+          : raw;
+        setMsg({ ok: false, text: friendly });
+      }
     });
   }
 
@@ -711,7 +729,7 @@ function LeaveRequestForm({
       <label className="text-sm font-medium block mb-1.5">
         Days to deduct{" "}
         <span className="text-slate-400 font-normal">
-          (auto = {computedDays || 0})
+          (auto = {computedDays || 0} weekdays · Mon–Fri only)
         </span>
       </label>
       <input
