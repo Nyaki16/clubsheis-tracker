@@ -162,10 +162,18 @@ export async function uploadIdDocument(
 // ── Leave requests ───────────────────────────────────────────────────────
 
 export async function createLeaveRequest(
-  input: LeaveRequestInput
+  input: LeaveRequestInput,
+  requesterId?: string
 ): Promise<InviteResult> {
   const me = await getMe();
   if (!me) return { ok: false, message: "Not signed in." };
+
+  // Default to filing for the signed-in user. Admins can file on behalf of
+  // anyone else by passing their profile id.
+  const target = requesterId ?? me.id;
+  if (target !== me.id && !me.isAdmin) {
+    return { ok: false, message: "You can only file leave for yourself." };
+  }
 
   const start = input.start_date;
   const end = input.end_date;
@@ -180,7 +188,7 @@ export async function createLeaveRequest(
 
   const admin = createAdminClient();
   const { error } = await admin.from("leave_requests").insert({
-    requester_id: me.id,
+    requester_id: target,
     start_date: start,
     end_date: end,
     days,
@@ -190,7 +198,7 @@ export async function createLeaveRequest(
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/csi-home");
-  revalidatePath(`/csi-home/team/${me.id}`);
+  revalidatePath(`/csi-home/team/${target}`);
   return { ok: true, message: "Leave request sent." };
 }
 

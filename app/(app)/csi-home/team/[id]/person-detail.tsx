@@ -166,12 +166,12 @@ export default function PersonDetail({
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="font-semibold">Leave</h3>
-          {viewer.isSelf && (
+          {canEdit && (
             <button
               onClick={() => setRequestingLeave(true)}
               className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-800"
             >
-              Request leave
+              {viewer.isSelf ? "Request leave" : "File leave"}
             </button>
           )}
         </div>
@@ -182,12 +182,16 @@ export default function PersonDetail({
           <Stat label="Remaining" value={remaining} valueClass="text-emerald-600" />
         </div>
 
+        <h4 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium mb-2">
+          Requests
+        </h4>
+
         {leave.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500 italic">
             No leave requests yet.
           </p>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800 -mx-5">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 -mx-5 border-t border-slate-100 dark:border-slate-800">
             {leave.map((l) => {
               const isPending = l.status === "pending";
               return (
@@ -265,8 +269,12 @@ export default function PersonDetail({
       )}
 
       {requestingLeave && (
-        <Modal title="Request leave" onClose={() => setRequestingLeave(false)}>
+        <Modal
+          title={viewer.isSelf ? "Request leave" : `File leave for ${profile.name}`}
+          onClose={() => setRequestingLeave(false)}
+        >
           <LeaveRequestForm
+            requesterId={profile.id}
             onDone={() => {
               setRequestingLeave(false);
               router.refresh();
@@ -626,7 +634,13 @@ function PersonalInfoForm({
 
 // ── Leave request form ─────────────────────────────────────────────────
 
-function LeaveRequestForm({ onDone }: { onDone: () => void }) {
+function LeaveRequestForm({
+  requesterId,
+  onDone,
+}: {
+  requesterId?: string;
+  onDone: () => void;
+}) {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("");
@@ -646,12 +660,15 @@ function LeaveRequestForm({ onDone }: { onDone: () => void }) {
       return;
     }
     startTransition(async () => {
-      const res = await createLeaveRequest({
-        start_date: start,
-        end_date: end,
-        days,
-        reason,
-      });
+      const res = await createLeaveRequest(
+        {
+          start_date: start,
+          end_date: end,
+          days,
+          reason,
+        },
+        requesterId
+      );
       setMsg({ ok: res.ok, text: res.message });
       if (res.ok) setTimeout(onDone, 600);
     });
