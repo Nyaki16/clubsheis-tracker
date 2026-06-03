@@ -4,10 +4,250 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type {
+  LeaveRequestInput,
+  LeaveStatus,
+  ProfileFields,
+} from "@/lib/types";
 
 export type InviteResult =
   | { ok: true; message: string }
   | { ok: false; message: string };
+
+// ── Auth helpers ─────────────────────────────────────────────────────────
+
+async function getMe() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, is_admin")
+    .eq("id", user.id)
+    .single();
+  if (!profile) return null;
+  return { id: user.id, isAdmin: !!profile.is_admin };
+}
+
+// ── Personal info (any field on a profile) ───────────────────────────────
+
+const PROFILE_FIELD_KEYS: (keyof ProfileFields)[] = [
+  "name",
+  "surname",
+  "cellphone",
+  "home_address",
+  "next_of_kin",
+  "next_of_kin_phone",
+  "id_document_url",
+  "job_title",
+  "start_date",
+  "annual_leave_allowance",
+];
+
+export async function updateProfileFields(
+  profileId: string,
+  fields: ProfileFields
+): Promise<InviteResult> {
+  const me = await getMe();
+  if (!me) return { ok: false, message: "Not signed in." };
+  if (me.id !== profileId && !me.isAdmin) {
+    return { ok: false, message: "You can only edit your own profile." };
+  }
+
+  const payload: Record<string, unknown> = {};
+  for (const k of PROFILE_FIELD_KEYS) {
+    if (fields[k] === undefined) continue;
+    const v = fields[k];
+    if (typeof v === "string") payload[k] = v.trim() || null;
+    else payload[k] = v;
+  }
+  // name must never be blank
+  if (payload.name !== undefined && !payload.name) {
+    return { ok: false, message: "Name can't be blank." };
+  }
+  // annual_leave_allowance must be a non-negative integer
+  if (payload.annual_leave_allowance !== undefined) {
+    const n = Number(payload.annual_leave_allowance);
+    if (Number.isNaN(n) || n < 0) {
+      return { ok: false, message: "Leave allowance must be 0 or more." };
+    }
+    if (!me.isAdmin) {
+      // only admins can edit allowance
+      delete payload.annual_leave_allowance;
+    } else {
+      payload.annual_leave_allowance = Math.round(n);
+    }
+  }
+  if (Object.keys(payload).length === 0) {
+    return { ok: true, message: "Nothing to update." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update(payload)
+    .eq("id", profileId);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/csi-home");
+  revalidatePath(`/csi-home/team/${profileId}`);
+  revalidatePath("/team");
+  revalidatePath("/profile");
+  return { ok: true, message: "Saved." };
+}
+
+// ── ID document upload ───────────────────────────────────────────────────
+
+const ID_BUCKET = "avatars"; // reusing the existing public bucket for now
+const MAX_ID_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_ID_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+]);
+
+export async function uploadIdDocument(
+  profileId: string,
+  formData: FormData
+): Promise<InviteResult> {
+  const me = await getMe();
+  if (!me) return { ok: false, message: "Not signed in." };
+  if (me.id !== profileId && !me.isAdmin) {
+    return { ok: false, message: "You can only upload your own ID." };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, message: "No file received." };
+  }
+  if (file.size === 0) return { ok: false, message: "File is empty." };
+  if (file.size > MAX_ID_BYTES) {
+    return { ok: false, message: "File is bigger than 10 MB." };
+  }
+  if (!ALLOWED_ID_TYPES.has(file.type)) {
+    return { ok: false, message: "Only JPG, PNG, WebP, GIF or PDF." };
+  }
+
+  const admin = createAdminClient();
+  const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
+  const path = `${profileId}/id-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error: upErr } = await admin.storage
+    .from(ID_BUCKET)
+    .upload(path, buffer, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: true,
+    });
+  if (upErr) return { ok: false, message: upErr.message };
+
+  const { data: pub } = admin.storage.from(ID_BUCKET).getPublicUrl(path);
+  const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+  const { error: updErr } = await admin
+    .from("profiles")
+    .update({ id_document_url: url })
+    .eq("id", profileId);
+  if (updErr) return { ok: false, message: updErr.message };
+
+  revalidatePath("/csi-home");
+  revalidatePath(`/csi-home/team/${profileId}`);
+  return { ok: true, message: url };
+}
+
+// ── Leave requests ───────────────────────────────────────────────────────
+
+export async function createLeaveRequest(
+  input: LeaveRequestInput
+): Promise<InviteResult> {
+  const me = await getMe();
+  if (!me) return { ok: false, message: "Not signed in." };
+
+  const start = input.start_date;
+  const end = input.end_date;
+  if (!start || !end) return { ok: false, message: "Pick both dates." };
+  if (end < start) {
+    return { ok: false, message: "End date can't be before start date." };
+  }
+  const days = Number(input.days);
+  if (!days || days <= 0) {
+    return { ok: false, message: "Days must be greater than 0." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("leave_requests").insert({
+    requester_id: me.id,
+    start_date: start,
+    end_date: end,
+    days,
+    reason: (input.reason ?? "").trim(),
+    status: "pending",
+  });
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/csi-home");
+  revalidatePath(`/csi-home/team/${me.id}`);
+  return { ok: true, message: "Leave request sent." };
+}
+
+export async function decideLeaveRequest(
+  id: string,
+  decision: "approved" | "rejected",
+  notes: string
+): Promise<InviteResult> {
+  const me = await getMe();
+  if (!me) return { ok: false, message: "Not signed in." };
+  if (!me.isAdmin) {
+    return { ok: false, message: "Only admins can approve or reject leave." };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("leave_requests")
+    .update({
+      status: decision,
+      approver_id: me.id,
+      decided_at: new Date().toISOString(),
+      decided_notes: notes.trim(),
+    })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/csi-home");
+  return { ok: true, message: `Leave ${decision}.` };
+}
+
+export async function cancelLeaveRequest(id: string): Promise<InviteResult> {
+  const me = await getMe();
+  if (!me) return { ok: false, message: "Not signed in." };
+
+  const admin = createAdminClient();
+  const { data: row, error: fetchErr } = await admin
+    .from("leave_requests")
+    .select("requester_id, status")
+    .eq("id", id)
+    .single();
+  if (fetchErr || !row) return { ok: false, message: "Request not found." };
+  if (row.requester_id !== me.id && !me.isAdmin) {
+    return { ok: false, message: "You can only cancel your own request." };
+  }
+  if (row.status !== "pending") {
+    return { ok: false, message: "Only pending requests can be cancelled." };
+  }
+
+  const { error } = await admin
+    .from("leave_requests")
+    .update({ status: "cancelled" })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/csi-home");
+  return { ok: true, message: "Request cancelled." };
+}
 
 // ── My profile (the signed-in user) ─────────────────────────────────────
 

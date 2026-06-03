@@ -4,7 +4,6 @@ import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import Avatar from "@/components/avatar";
 import InviteButton from "./invite-button";
-import MemberActions from "./member-actions";
 
 export default async function TeamPage() {
   const supabase = await createClient();
@@ -105,11 +104,14 @@ export default async function TeamPage() {
                 })}
               </div>
               {isAdmin && (
-                <MemberActions
-                  profileId={p.id}
-                  isAdminUser={p.is_admin}
-                  isSelf={p.id === user?.id}
-                />
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <a
+                    href={`/csi-home/team/${p.id}`}
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  >
+                    Manage in HR →
+                  </a>
+                </div>
               )}
             </div>
           );

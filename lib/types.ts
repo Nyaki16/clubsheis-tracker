@@ -4,7 +4,52 @@ export type Profile = {
   email: string;
   is_admin: boolean;
   avatar_url: string | null;
+  surname: string | null;
+  cellphone: string | null;
+  home_address: string | null;
+  next_of_kin: string | null;
+  next_of_kin_phone: string | null;
+  id_document_url: string | null;
+  job_title: string | null;
+  start_date: string | null;
+  annual_leave_allowance: number;
   created_at: string;
+};
+
+export type ProfileFields = {
+  name?: string;
+  surname?: string | null;
+  cellphone?: string | null;
+  home_address?: string | null;
+  next_of_kin?: string | null;
+  next_of_kin_phone?: string | null;
+  id_document_url?: string | null;
+  job_title?: string | null;
+  start_date?: string | null;
+  annual_leave_allowance?: number;
+};
+
+export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export type LeaveRequest = {
+  id: string;
+  requester_id: string;
+  approver_id: string | null;
+  start_date: string;
+  end_date: string;
+  days: number;
+  reason: string;
+  status: LeaveStatus;
+  decided_at: string | null;
+  decided_notes: string;
+  created_at: string;
+};
+
+export type LeaveRequestInput = {
+  start_date: string;
+  end_date: string;
+  days: number;
+  reason: string;
 };
 
 export type Client = {
