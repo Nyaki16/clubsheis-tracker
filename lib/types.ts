@@ -209,14 +209,18 @@ export type SopInput = {
 export type VaultLink = {
   id: string;
   label: string;
-  url: string;
+  username: string | null;
+  password: string | null;
+  url: string | null;
   notes: string;
   created_at: string;
 };
 
 export type VaultLinkInput = {
   label: string;
-  url: string;
+  username?: string | null;
+  password?: string | null;
+  url?: string | null;
   notes?: string;
 };
 

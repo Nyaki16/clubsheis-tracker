@@ -97,9 +97,17 @@ export async function deleteSop(id: string) {
 // ── Vault links ──────────────────────────────────────────────────────────
 
 function cleanVaultLink(input: VaultLinkInput) {
+  const trim = (v: string | null | undefined) => {
+    if (v === undefined) return undefined;
+    return v && v.trim() ? v.trim() : null;
+  };
   return {
     label: input.label.trim(),
-    url: input.url.trim(),
+    username: trim(input.username),
+    // Password kept verbatim — no .trim() so leading/trailing spaces are
+    // preserved if they're part of the credential. Empty → null.
+    password: input.password ? input.password : input.password === "" ? null : input.password,
+    url: trim(input.url),
     notes: (input.notes ?? "").trim(),
   };
 }
@@ -107,7 +115,6 @@ function cleanVaultLink(input: VaultLinkInput) {
 export async function createVaultLink(input: VaultLinkInput) {
   const c = cleanVaultLink(input);
   if (!c.label) throw new Error("Label is required.");
-  if (!c.url) throw new Error("URL is required.");
   const supabase = await createClient();
   const { error } = await supabase.from("vault_links").insert(c);
   if (error) throw new Error(error.message);
@@ -117,7 +124,6 @@ export async function createVaultLink(input: VaultLinkInput) {
 export async function updateVaultLink(id: string, input: VaultLinkInput) {
   const c = cleanVaultLink(input);
   if (!c.label) throw new Error("Label is required.");
-  if (!c.url) throw new Error("URL is required.");
   const supabase = await createClient();
   const { error } = await supabase.from("vault_links").update(c).eq("id", id);
   if (error) throw new Error(error.message);
