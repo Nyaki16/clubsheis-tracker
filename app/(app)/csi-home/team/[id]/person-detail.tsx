@@ -21,6 +21,7 @@ import {
   createLeaveRequest,
   decideLeaveRequest,
   reinviteUser,
+  removeUser,
   setIsAdmin,
   updateProfileFields,
   uploadIdDocument,
@@ -134,6 +135,7 @@ export default function PersonDetail({
         {isAdminViewing && (
           <AdminActions
             profileId={profile.id}
+            profileName={profile.name}
             isCurrentlyAdmin={profile.is_admin}
           />
         )}
@@ -365,9 +367,11 @@ function Stat({
 
 function AdminActions({
   profileId,
+  profileName,
   isCurrentlyAdmin,
 }: {
   profileId: string;
+  profileName: string;
   isCurrentlyAdmin: boolean;
 }) {
   const router = useRouter();
@@ -390,6 +394,25 @@ function AdminActions({
       if (res.ok) router.refresh();
     });
   }
+  function remove() {
+    if (
+      !confirm(
+        `Permanently remove ${profileName}? They lose access immediately, their ` +
+          `tasks become unassigned, and their leave history is deleted. This can't be undone.`
+      )
+    )
+      return;
+    setMsg(null);
+    startTransition(async () => {
+      const res = await removeUser(profileId);
+      if (res.ok) {
+        router.push("/csi-home");
+        router.refresh();
+      } else {
+        setMsg(res.message);
+      }
+    });
+  }
 
   return (
     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 flex-wrap">
@@ -407,6 +430,13 @@ function AdminActions({
       >
         <ShieldCheck className="w-3.5 h-3.5" />
         {isCurrentlyAdmin ? "Demote from admin" : "Make admin"}
+      </button>
+      <button
+        onClick={remove}
+        disabled={pending}
+        className="text-xs px-2.5 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-400 dark:hover:bg-rose-950/40 flex items-center gap-1.5 disabled:opacity-60"
+      >
+        <Trash2 className="w-3.5 h-3.5" /> Remove user
       </button>
       {msg && (
         <span className="text-xs text-slate-500 dark:text-slate-400">{msg}</span>

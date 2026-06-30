@@ -614,6 +614,52 @@ export async function reinviteUser(profileId: string): Promise<InviteResult> {
   };
 }
 
+// Permanently remove a user. Deleting the auth.users row cascades to their
+// profile (profiles.id → auth.users on delete cascade), which in turn unassigns
+// their tasks (assignee_id → set null) and removes their leave requests
+// (requester_id → cascade). Irreversible.
+export async function removeUser(profileId: string): Promise<InviteResult> {
+  let me;
+  try {
+    me = await requireAdmin();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Forbidden." };
+  }
+
+  if (me.id === profileId) {
+    return { ok: false, message: "You can't remove your own account." };
+  }
+
+  const admin = createAdminClient();
+
+  // Don't let the team be left with no admins.
+  const { data: target } = await admin
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", profileId)
+    .single();
+  if (target?.is_admin) {
+    const { count } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_admin", true);
+    if ((count ?? 0) <= 1) {
+      return { ok: false, message: "Can't remove the last admin." };
+    }
+  }
+
+  // Deleting the auth user cascades to the profile and dependent rows.
+  const { error } = await admin.auth.admin.deleteUser(profileId);
+  if (error) return { ok: false, message: error.message };
+
+  for (const p of ["/team", "/csi-home", "/daily", "/dashboard", "/pipeline", "/clients"]) {
+    try {
+      revalidatePath(p);
+    } catch {}
+  }
+  return { ok: true, message: "User removed." };
+}
+
 export async function setIsAdmin(profileId: string, isAdmin: boolean): Promise<InviteResult> {
   try {
     await requireAdmin();
