@@ -135,14 +135,13 @@ export const YS_SECTIONS: { title: string; fields: YsField[] }[] = [
       {
         key: "cta",
         label: "What should people do next?",
-        placeholder: "e.g. Book a free 15-minute call at calendly.com/… or buy now at…",
+        placeholder: "e.g. Book a free 15-minute call, or buy the programme now.",
         rows: 3,
         required: true,
         minWords: 8,
         targetWords: 30,
         guide: [
           "The one action you want: buy, book a call, join the waitlist, DM you?",
-          "The link, booking page or number they should use.",
           "Anything they need to know first, like a deadline or limited spots?",
         ],
       },
