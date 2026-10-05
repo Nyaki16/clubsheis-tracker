@@ -6,6 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   CalendarDays,
+  Download,
   House,
   Layers,
   LayoutDashboard,
@@ -53,6 +54,7 @@ const GROUPS = [
       { href: "/settings/templates", label: "Package templates", icon: Layers },
       { href: "/settings/pricing", label: "Pricing", icon: Tag },
       { href: "/settings/calendar", label: "Calendar sync", icon: CalendarDays },
+      { href: "/settings/import", label: "Import from Client Flow", icon: Download },
     ],
   },
 ];

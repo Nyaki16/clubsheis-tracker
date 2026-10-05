@@ -251,6 +251,8 @@ function ClientCard({ client, tasks, owner }: { client: Client; tasks: Task[]; o
           <Avatar name={owner(next.assignee_id)?.name ?? "?"} url={owner(next.assignee_id)?.avatar_url} size="xs" />
           <span className="truncate">{next.title}</span>
         </div>
+      ) : client.package === "lead" ? (
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Pick a package to continue</p>
       ) : (
         <p className="text-xs text-emerald-600">All tasks done</p>
       )}

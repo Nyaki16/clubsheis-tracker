@@ -15,8 +15,10 @@ const label = "block text-[11px] font-semibold uppercase tracking-wider text-sla
 const btnPrimary = "text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50";
 const btn = "text-sm font-medium border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50";
 
-const fmt = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const fmt = (iso?: string | null) => {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d.getTime()) ? d.toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+};
 
 // Read the generate route's progress stream until it reports done or error.
 async function runGenerate(taskId: string, notes: string, onProgress: (chars: number) => void) {
@@ -242,8 +244,9 @@ function ProposalEditor({
       <div className="flex flex-col gap-3">
         <PdfCard taskId={task.id} client={client} data={data} />
         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-          ✓ Sent to {ts.sent_to} on {fmt(ts.sent_at)} ·{" "}
-          {ts.opened_at ? `opened ${fmt(ts.opened_at)}` : "not opened yet"}
+          ✓ Sent to {ts.sent_to}
+          {fmt(ts.sent_at) ? ` on ${fmt(ts.sent_at)}` : ""} ·{" "}
+          {ts.opened_at ? `opened${fmt(ts.opened_at) ? ` ${fmt(ts.opened_at)}` : ""}` : "not opened yet"}
         </p>
         <button className={`${btn} self-start`} onClick={onEditAgain}>Edit and resend</button>
       </div>

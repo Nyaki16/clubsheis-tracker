@@ -123,9 +123,12 @@ export function sortFlowTasks<T extends Pick<Task, "phase" | "position" | "creat
   );
 }
 
+// The phase of the first open task. When everything is done, the client sits
+// in the last phase they have tasks in (e.g. Sales for "Package not chosen").
 export function currentPhase(tasks: Pick<Task, "phase" | "status" | "position" | "created_at">[]): PhaseId | null {
-  const open = sortFlowTasks(tasks).find((t) => !isDone(t));
-  return (open?.phase as PhaseId) ?? (tasks.length ? "delivery" : null);
+  const sorted = sortFlowTasks(tasks);
+  const open = sorted.find((t) => !isDone(t));
+  return ((open ?? sorted[sorted.length - 1])?.phase as PhaseId) ?? null;
 }
 
 // Switching package keeps tasks the new package also has and anything already
