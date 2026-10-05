@@ -13,20 +13,43 @@ export const PHASES = [
 ] as const;
 export type PhaseId = (typeof PHASES)[number]["id"];
 
-export const PACKAGES = [
-  { id: "lead", label: "Package not chosen", short: "No package yet", description: "Sales tasks only until you pick" },
-  { id: "ghutte", label: "Ghutte Only", short: "Ghutte Only", description: "Onboarding onto Ghutte" },
-  { id: "page", label: "New Page Build", short: "New Page Build", description: "One page built in Ghutte" },
-  { id: "content", label: "Content Day", short: "Content Day", description: "Long + short form in studio" },
-  { id: "ads", label: "Ads + Email + Social", short: "Ads + Email + Social", description: "Meta ads, newsletters, social" },
-  { id: "full", label: "Full Build", short: "Full Build", description: "Lead magnet, OTO, main product" },
-] as const;
-export type PackageId = (typeof PACKAGES)[number]["id"];
+export type PackageDef = {
+  id: string;
+  label: string;
+  short: string;
+  description: string;
+  builtin?: boolean;
+  /** Default name when New job uses this package. */
+  job_name?: string;
+  /** Template size: every task, and the Production + Delivery work alone. */
+  tasks?: number;
+  work?: number;
+};
+/** Phases a returning (already onboarded) client skips when a package adds a new job. */
+export const SETUP_PHASES = ["sales", "onboarding", "yellow"] as const;
+export type PackageId = string;
+
+// The original six. The live list (including packages the team adds) comes from
+// the `packages` table: see lib/packages.ts and usePackages().
+export const PACKAGES: PackageDef[] = [
+  { id: "lead", label: "Package not chosen", short: "No package yet", description: "Sales tasks only until you pick", builtin: true },
+  { id: "ghutte", label: "Ghutte Only", short: "Ghutte Only", description: "Onboarding onto Ghutte", builtin: true },
+  { id: "page", label: "New Page Build", short: "New Page Build", description: "One page built in Ghutte", builtin: true },
+  { id: "content", label: "Content Day", short: "Content Day", description: "Long + short form in studio", builtin: true },
+  { id: "ads", label: "Ads + Email + Social", short: "Ads + Email + Social", description: "Meta ads, newsletters, social", builtin: true },
+  { id: "full", label: "Full Build", short: "Full Build", description: "Lead magnet, OTO, main product", builtin: true },
+];
+
+let known: PackageDef[] = PACKAGES;
+/** Make packageLabel() aware of the team's own packages. */
+export function setKnownPackages(list: PackageDef[]) {
+  if (list.length) known = list;
+}
 
 export function packageLabel(id: string | null | undefined, short = false) {
-  const p = PACKAGES.find((x) => x.id === id);
+  const p = known.find((x) => x.id === id) ?? PACKAGES.find((x) => x.id === id);
   if (!p) return "No package";
-  return short ? p.short : p.label;
+  return short ? p.short || p.label : p.label;
 }
 
 export const TOOLS = [

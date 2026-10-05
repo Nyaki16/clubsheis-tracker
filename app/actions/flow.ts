@@ -133,6 +133,14 @@ export async function startFlow(clientId: string, pkg: PackageId) {
 
 export async function changeClientPackage(clientId: string, pkg: PackageId) {
   const supabase = await createClient();
+  const r = await applyPackage(supabase, clientId, pkg);
+  revalidateFlow(clientId);
+  return r;
+}
+
+// Swap a client's flow onto another package: add the new package's tasks and
+// remove untouched ones it doesn't have. Tasks with work in them always stay.
+async function applyPackage(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string, pkg: PackageId) {
   const { data: client, error: cErr } = await supabase
     .from("clients")
     .select("id, lead_id")
@@ -163,8 +171,6 @@ export async function changeClientPackage(clientId: string, pkg: PackageId) {
   }
   const { error } = await supabase.from("clients").update({ package: pkg }).eq("id", clientId);
   if (error) throw new Error(error.message);
-
-  revalidateFlow(clientId);
   return { added: add.length, removed: remove.length };
 }
 
@@ -351,6 +357,11 @@ export async function deletePricingTier(id: string) {
 // from the booking and the Gemini notes in the Discovery task.
 export async function revivePastLead(clientId: string) {
   const supabase = await createClient();
+  await revive(supabase, clientId);
+  revalidateFlow(clientId);
+}
+
+async function revive(supabase: Awaited<ReturnType<typeof createClient>>, clientId: string) {
   const { data: client, error } = await supabase.from("clients").select("*").eq("id", clientId).single();
   if (error) throw new Error(error.message);
 
@@ -380,5 +391,107 @@ export async function revivePastLead(clientId: string) {
       })
       .eq("id", disc.id);
   }
-  revalidateFlow(clientId);
+}
+
+export type BulkClientChange =
+  | { kind: "package"; pkg: PackageId }
+  | { kind: "lead"; leadId: string | null }
+  | { kind: "past"; past: boolean };
+
+/** Apply one change to a batch of clients (the page sends them in small chunks). */
+export async function bulkUpdateClients(ids: string[], change: BulkClientChange) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Sign in first.");
+  if (!ids.length) return { added: 0, removed: 0 };
+  if (ids.length > 25) throw new Error("Send at most 25 clients at a time.");
+  let added = 0;
+  let removed = 0;
+  if (change.kind === "lead") {
+    const { error } = await supabase.from("clients").update({ lead_id: change.leadId || null }).in("id", ids);
+    if (error) throw new Error(error.message);
+  } else if (change.kind === "past" && change.past) {
+    const { error } = await supabase.from("clients").update({ is_past_lead: true }).in("id", ids);
+    if (error) throw new Error(error.message);
+  } else if (change.kind === "past") {
+    for (const id of ids) await revive(supabase, id);
+  } else {
+    for (const id of ids) {
+      const r = await applyPackage(supabase, id, change.pkg);
+      added += r.added;
+      removed += r.removed;
+    }
+  }
+  revalidateFlow();
+  return { added, removed };
+}
+
+// ── Packages ─────────────────────────────────────────────────────────────────
+
+export type PackageInput = { label: string; short?: string; description?: string; job_name?: string };
+
+function revalidatePackages() {
+  // The package list is loaded in the app layout, so every page needs it fresh.
+  revalidatePath("/", "layout");
+}
+
+export async function createPackage(input: PackageInput & { withSetup?: boolean }) {
+  const supabase = await createClient();
+  const label = input.label.trim();
+  if (!label) throw new Error("Give the package a name.");
+  const base = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "package";
+  const { data: existing } = await supabase.from("packages").select("id, position");
+  const ids = new Set((existing ?? []).map((p) => p.id as string));
+  let id = base;
+  for (let n = 2; ids.has(id); n++) id = `${base}_${n}`;
+  const position = Math.max(0, ...(existing ?? []).map((p) => (p.position as number) ?? 0)) + 1;
+  const { error } = await supabase.from("packages").insert({
+    id,
+    label,
+    short: input.short?.trim() || label,
+    description: input.description?.trim() ?? "",
+    job_name: input.job_name?.trim() ?? "",
+    position,
+  });
+  if (error) throw new Error(error.message);
+  if (input.withSetup) {
+    // Start from the usual Sales + Onboarding steps (as set up on Full Build).
+    const { data: setup } = await supabase
+      .from("flow_templates")
+      .select("phase, position, title, tool, default_assignee_id")
+      .eq("package", "full")
+      .in("phase", ["sales", "onboarding"]);
+    if (setup?.length) {
+      const { error: tErr } = await supabase.from("flow_templates").insert(setup.map((t) => ({ ...t, package: id })));
+      if (tErr) throw new Error(tErr.message);
+    }
+  }
+  revalidatePackages();
+  return { id };
+}
+
+export async function updatePackage(id: string, input: PackageInput) {
+  const supabase = await createClient();
+  const patch: Record<string, string> = {};
+  if (input.label !== undefined) {
+    if (!input.label.trim()) throw new Error("The package needs a name.");
+    patch.label = input.label.trim();
+  }
+  if (input.short !== undefined) patch.short = input.short.trim();
+  if (input.description !== undefined) patch.description = input.description.trim();
+  if (input.job_name !== undefined) patch.job_name = input.job_name.trim();
+  const { error } = await supabase.from("packages").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePackages();
+}
+
+export async function deletePackage(id: string) {
+  if (id === "lead") throw new Error("“Package not chosen” is where new leads start, so it can't be deleted.");
+  const supabase = await createClient();
+  const { count } = await supabase.from("clients").select("id", { count: "exact", head: true }).eq("package", id);
+  if (count) throw new Error(`${count} client${count === 1 ? " is" : "s are"} on this package. Move them to another package first.`);
+  await supabase.from("flow_templates").delete().eq("package", id);
+  const { error } = await supabase.from("packages").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePackages();
 }

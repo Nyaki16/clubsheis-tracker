@@ -3,17 +3,18 @@ import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/nav";
 import { ToastProvider } from "@/components/flow/ui";
 import DebbieLauncher from "@/components/debbie/debbie-launcher";
+import { PackagesProvider } from "@/components/flow/packages-context";
+import { loadPackages } from "@/lib/packages";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, email, avatar_url")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, packages] = await Promise.all([
+    supabase.from("profiles").select("name, email, avatar_url").eq("id", user.id).single(),
+    loadPackages(supabase),
+  ]);
 
   return (
     <>
@@ -28,8 +29,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="lg:pl-60">
         <ToastProvider>
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
-          <DebbieLauncher />
+          <PackagesProvider packages={packages}>
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
+            <DebbieLauncher />
+          </PackagesProvider>
         </ToastProvider>
       </div>
     </>

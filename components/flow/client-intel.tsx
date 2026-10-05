@@ -242,7 +242,6 @@ function Meetings({ client, meetings, author }: { client: Client; meetings: Meet
                 {m.notes_url && (
                   <a href={m.notes_url} target="_blank" rel="noopener noreferrer" className="text-xs underline">Notes by Gemini</a>
                 )}
-                {!m.notes.trim() && <span className="text-xs text-slate-400">{m.starts_at && new Date(m.starts_at) > new Date() ? "Upcoming" : "No notes"}</span>}
                 {m.source === "manual" && (
                   <span className="ml-auto flex gap-1">
                     <button

@@ -18,6 +18,7 @@ import type { Client, Job, Profile, Task } from "@/lib/types";
 import { isOverdue, isThisWeek, isToday } from "@/lib/utils";
 import { createTask } from "@/app/actions/tasks";
 import { createJob } from "@/app/actions/jobs";
+import { useToast } from "@/components/flow/ui";
 
 type GroupBy = "assignee" | "client" | "none";
 
@@ -45,6 +46,7 @@ export default function DailyClient({
   profiles: Profile[];
 }) {
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState(() =>
     searchParams.get("assignee") === "unassigned" ? "unassigned" : "all"
@@ -556,7 +558,8 @@ export default function DailyClient({
             clients={clients}
             onSubmit={async (name, dueDate, clientId, templateId) => {
               if (!clientId) return;
-              await createJob(clientId, name, dueDate || null, templateId);
+              const r = await createJob(clientId, name, dueDate || null, templateId);
+              toast(r.message);
               setShowNewJob(false);
             }}
           />

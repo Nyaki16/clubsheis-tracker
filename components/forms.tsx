@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
-import { JOB_TEMPLATES } from "@/lib/job-templates";
+import { usePackages } from "@/components/flow/packages-context";
 import type {
   Profile,
   Client,
@@ -66,12 +66,13 @@ export function JobForm({
   const [pending, startTransition] = useTransition();
 
   const needsClientPicker = !!clients;
-  const selectedTemplate = JOB_TEMPLATES.find((t) => t.id === templateId) ?? null;
+  const packages = usePackages().filter((p) => p.id !== "lead");
+  const selectedTemplate = packages.find((t) => t.id === templateId) ?? null;
 
   function pickTemplate(id: string) {
     setTemplateId(id);
-    const t = JOB_TEMPLATES.find((x) => x.id === id);
-    if (t && !name.trim()) setName(t.defaultJobName);
+    const t = packages.find((x) => x.id === id);
+    if (t && !name.trim()) setName(t.job_name || t.label);
   }
 
   function submit() {
@@ -108,14 +109,14 @@ export function JobForm({
         </>
       )}
 
-      <label className="text-sm font-medium block mb-1.5">Template (optional)</label>
+      <label className="text-sm font-medium block mb-1.5">Package (optional)</label>
       <select
         value={templateId}
         onChange={(e) => pickTemplate(e.target.value)}
         className="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm mb-1 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
       >
         <option value="">No template (blank job)</option>
-        {JOB_TEMPLATES.map((t) => (
+        {packages.map((t) => (
           <option key={t.id} value={t.id}>
             {t.label}
           </option>
@@ -123,7 +124,8 @@ export function JobForm({
       </select>
       {selectedTemplate ? (
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          Will create {selectedTemplate.tasks.length} starter tasks · {selectedTemplate.description}
+          {selectedTemplate.description && <>{selectedTemplate.description} · </>}
+          Already onboarded: a new job with {selectedTemplate.work ?? 0} tasks (Sales and Onboarding skipped). Not yet: starts their client flow from Sales.
         </p>
       ) : (
         <div className="mb-3" />

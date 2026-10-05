@@ -5,9 +5,11 @@ import { Plus } from "lucide-react";
 import Modal from "@/components/modal";
 import { JobForm } from "@/components/forms";
 import { createJob } from "@/app/actions/jobs";
+import { useToast } from "@/components/flow/ui";
 
 export default function NewJobButton({ clientId }: { clientId: string }) {
   const [open, setOpen] = useState(false);
+  const toast = useToast();
 
   return (
     <>
@@ -21,7 +23,8 @@ export default function NewJobButton({ clientId }: { clientId: string }) {
         <Modal title="New job" onClose={() => setOpen(false)}>
           <JobForm
             onSubmit={async (name, dueDate, _c, templateId) => {
-              await createJob(clientId, name, dueDate || null, templateId);
+              const r = await createJob(clientId, name, dueDate || null, templateId);
+              toast(r.message);
               setOpen(false);
             }}
           />

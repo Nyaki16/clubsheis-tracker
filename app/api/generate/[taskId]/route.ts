@@ -4,6 +4,7 @@ import { loadProposalContext } from "@/lib/proposal-server";
 import { generatorFor } from "@/lib/generators";
 import { yellowSheetText } from "@/lib/yellow-sheet";
 import { isDone, packageLabel } from "@/lib/flow";
+import { loadPackages } from "@/lib/packages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ taskId:
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return Response.json({ error: "Sign in to generate." }, { status: 401 });
+  await loadPackages(supabase);
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: "Generation isn't set up yet: add ANTHROPIC_API_KEY to the Tracker's Vercel environment variables." },

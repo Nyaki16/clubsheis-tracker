@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Client, ClientDocument, Meeting, Task } from "./types";
 import { PHASES, packageLabel } from "./flow";
+import { loadPackages } from "./packages";
 import { yellowSheetText } from "./yellow-sheet";
 import type { ProposalData } from "./proposal-template";
 
@@ -69,6 +70,7 @@ export async function latestDocs(sb: SupabaseClient, clientId: string) {
 }
 
 async function gather(sb: SupabaseClient, clientId: string) {
+  await loadPackages(sb);
   const { data: client } = await sb.from("clients").select("*").eq("id", clientId).single();
   if (!client) throw new Error("Client not found.");
   const c = client as Client;

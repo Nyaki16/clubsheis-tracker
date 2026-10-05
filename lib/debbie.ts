@@ -6,6 +6,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PHASES, isDone, packageLabel, currentPhase } from "./flow";
+import { loadPackages } from "./packages";
 import type { Meeting, Task } from "./types";
 
 export const DEBBIE_MODEL = "claude-sonnet-5-5";
@@ -368,7 +369,7 @@ export async function askDebbie(
   emit: (e: DebbieEvent) => void
 ) {
   const anthropic = new Anthropic();
-  const system = await debbieSystem(sb, userName);
+  const [system] = await Promise.all([debbieSystem(sb, userName), loadPackages(sb)]);
   // Earlier turns go back as plain text, so every request is append-only.
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m) => ({ role: m.role, content: m.text }));
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -414,6 +415,50 @@ export async function askDebbie(
 
 // ── Debbie Recommends ────────────────────────────────────────────────────────
 
+type Rec = { title: string; client: string; assignee: string; due_date: string; quote: string };
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/**
+ * Now and then the model writes the rest of its list inside one task's quote
+ * (`…"}, {"title":"…","quote":"…"}]}`). Cut the quote back to its own words and
+ * pull the tasks hidden in it back out.
+ */
+export function unpackRec(t: Rec): Rec[] {
+  const q = t.quote;
+  const cut = q.search(/"\s*\}\s*,?\s*\{\s*"title"\s*:/);
+  if (cut < 0) return [{ ...t, quote: q.trim() }];
+  const out: Rec[] = [{ ...t, quote: q.slice(0, cut).trim() }];
+  const starts = /\{\s*"title"\s*:/g;
+  starts.lastIndex = cut;
+  for (let m = starts.exec(q); m; m = starts.exec(q)) {
+    // Find the shortest {...} from here that parses as a task.
+    for (let end = q.indexOf("}", m.index); end >= 0; end = q.indexOf("}", end + 1)) {
+      let o: Record<string, unknown> | null = null;
+      try {
+        o = JSON.parse(q.slice(m.index, end + 1));
+      } catch {
+        continue;
+      }
+      if (o && str(o.title)) {
+        out.push({ title: str(o.title), client: str(o.client), assignee: str(o.assignee), due_date: str(o.due_date), quote: str(o.quote).trim() });
+        starts.lastIndex = end + 1;
+      }
+      break;
+    }
+  }
+  return out;
+}
+
+const cleanRecs = (tasks: Rec[]) => {
+  const seen = new Set<string>();
+  return tasks
+    .flatMap(unpackRec)
+    .map((t) => ({ ...t, title: t.title.trim().slice(0, 140), quote: t.quote.slice(0, 400) }))
+    .filter((t) => t.title && !seen.has(t.title.toLowerCase()) && seen.add(t.title.toLowerCase()));
+};
+
+const recNotes = (date: string | null, quote: string) => `From Team Scroll, ${fmt(date)}: “${quote}”`;
+
 const RECOMMEND_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -430,7 +475,7 @@ const RECOMMEND_SCHEMA = {
           client: { type: "string", description: "Client or business name, or empty string for internal work." },
           assignee: { type: "string", description: "First name of the team member who should own it, or empty string." },
           due_date: { type: "string", description: "YYYY-MM-DD if a date was said or clearly implied, else empty string." },
-          quote: { type: "string", description: "The words from the notes this task comes from." },
+          quote: { type: "string", description: "The one or two sentences from the notes this task comes from (under 250 characters). Only this task's words, never other tasks." },
         },
       },
     },
@@ -484,11 +529,11 @@ Active clients: ${(clients ?? []).map((c) => (c.business_name ? `${c.name} (${c.
   let added = 0;
   if (msg.stop_reason !== "refusal") {
     const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-    const out = JSON.parse(text) as { tasks: { title: string; client: string; assignee: string; due_date: string; quote: string }[] };
-    for (const t of out.tasks.slice(0, 12)) {
+    const out = JSON.parse(text) as { tasks: Rec[] };
+    for (const t of cleanRecs(out.tasks).slice(0, 12)) {
       await createDebbieTask(
         sb,
-        { title: t.title, client: t.client || undefined, assignee: t.assignee || undefined, due_date: t.due_date || undefined, notes: `From Team Scroll, ${fmt(meeting.starts_at)}: “${t.quote}”` },
+        { title: t.title, client: t.client || undefined, assignee: t.assignee || undefined, due_date: t.due_date || undefined, notes: recNotes(meeting.starts_at, t.quote) },
         { meeting_id: meeting.id, meeting_title: meeting.title, date: meeting.starts_at, quote: t.quote }
       );
       added++;
@@ -498,7 +543,31 @@ Active clients: ${(clients ?? []).map((c) => (c.business_name ? `${c.name} (${c.
   return added;
 }
 
+// Split any task that came out with other tasks inside its quote (see unpackRec).
+export async function repairRecommendations(sb: SupabaseClient) {
+  const { data } = await sb
+    .from("tasks")
+    .select("id, title, debbie_source")
+    .eq("debbie_recommended", true)
+    .like("debbie_source->>quote", '%"title"%');
+  for (const row of (data ?? []) as { id: string; title: string; debbie_source: NonNullable<Task["debbie_source"]> }[]) {
+    const src = row.debbie_source;
+    const [own, ...extra] = unpackRec({ title: row.title, client: "", assignee: "", due_date: "", quote: src.quote });
+    await sb.from("tasks").update({ notes: recNotes(src.date, own.quote), debbie_source: { ...src, quote: own.quote } }).eq("id", row.id);
+    for (const t of cleanRecs(extra)) {
+      const { count } = await sb.from("tasks").select("id", { count: "exact", head: true }).eq("debbie_recommended", true).ilike("title", t.title.replace(/[%_\\]/g, "\\$&"));
+      if (count) continue;
+      await createDebbieTask(
+        sb,
+        { title: t.title, client: t.client || undefined, assignee: t.assignee || undefined, due_date: t.due_date || undefined, notes: recNotes(src.date, t.quote) },
+        { ...src, quote: t.quote }
+      );
+    }
+  }
+}
+
 export async function processTeamScrolls(sb: SupabaseClient, limit = 1) {
+  await repairRecommendations(sb);
   // History (e.g. from the backfill) is marked handled in one go: Debbie only
   // recommends from the last few days' Team Scrolls.
   await sb

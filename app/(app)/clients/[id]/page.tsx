@@ -43,7 +43,7 @@ export default async function ClientDetailPage({
   ]);
   const meetings = ((meetingsRes.data ?? []) as unknown as { meetings: Meeting | null }[])
     .map((r) => r.meetings)
-    .filter((m): m is Meeting => !!m);
+    .filter((m): m is Meeting => !!m && !!m.notes.trim());
 
   const allJobs: Job[] = jobsRes.data ?? [];
   const jobIds = allJobs.map((j) => j.id);

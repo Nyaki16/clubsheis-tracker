@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { CalendarDays, FolderOpen, Pencil } from "lucide-react";
-import { PACKAGES, PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId, type PhaseId, type PricingTier } from "@/lib/flow";
+import { usePackages } from "@/components/flow/packages-context";
+import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId, type PhaseId, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTaskStatus } from "@/app/actions/tasks";
 import { addFlowTask, restoreTask, startFlow } from "@/app/actions/flow";
@@ -244,6 +245,7 @@ function AddTask({ clientId, phase, label, defaultAssignee }: { clientId: string
 }
 
 function StartFlow({ client, templates }: { client: Client; templates: FlowTemplate[] }) {
+  const packages = usePackages();
   const [pending, start] = useTransition();
   const toast = useToast();
   return (
@@ -253,7 +255,7 @@ function StartFlow({ client, templates }: { client: Client; templates: FlowTempl
         <p className="text-sm text-slate-500">Pick {client.name}&apos;s package and the tasks are issued from its template.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {PACKAGES.map((p) => (
+        {packages.map((p) => (
           <button
             key={p.id}
             disabled={pending}

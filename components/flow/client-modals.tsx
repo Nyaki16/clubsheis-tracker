@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { PACKAGES, PHASES, packageDiff, type FlowTemplate, type PackageId } from "@/lib/flow";
+import { usePackages } from "@/components/flow/packages-context";
+import { PHASES, packageDiff, packageLabel, type FlowTemplate, type PackageId } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { changeClientPackage, createFlowClient, updateClientDetails } from "@/app/actions/flow";
 import { PhaseDot, useToast } from "./ui";
@@ -85,11 +86,12 @@ function DetailFields({ d, set, profiles }: { d: Details; set: (k: keyof Details
 }
 
 function PackagePicker({ value, onChange, includeLead }: { value: PackageId; onChange: (p: PackageId) => void; includeLead?: boolean }) {
+  const packages = usePackages();
   return (
     <div>
       <p className={label}>Package</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {PACKAGES.filter((p) => includeLead || p.id !== "lead").map((p) => (
+        {packages.filter((p) => includeLead || p.id !== "lead").map((p) => (
           <button
             type="button"
             key={p.id}
@@ -156,7 +158,7 @@ export function NewClientModal({
     start(async () => {
       try {
         const r = await createFlowClient({ ...d, lead_id: d.lead_id || null, package: pkg });
-        toast(`${r.issued} tasks issued from the ${PACKAGES.find((p) => p.id === pkg)?.label} template`);
+        toast(`${r.issued} tasks issued from the ${packageLabel(pkg)} template`);
         onClose();
         router.push(`/clients/${r.id}`);
       } catch (err) {
@@ -229,7 +231,7 @@ export function EditClientModal({
         await updateClientDetails(client.id, { ...d, lead_id: d.lead_id || null });
         if (pkg !== current) {
           const r = await changeClientPackage(client.id, pkg);
-          toast(`Now ${PACKAGES.find((p) => p.id === pkg)?.label}: ${r.added} tasks added, ${r.removed} removed`);
+          toast(`Now ${packageLabel(pkg)}: ${r.added} tasks added, ${r.removed} removed`);
         } else toast("Details saved");
         onClose();
       } catch (err) {
@@ -266,7 +268,7 @@ export function EditClientModal({
         {diff && (
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-3 flex flex-col gap-2 text-xs" aria-live="polite">
             <p className="font-semibold text-slate-600 dark:text-slate-300">
-              Switching {PACKAGES.find((p) => p.id === current)?.label} → {PACKAGES.find((p) => p.id === pkg)?.label}
+              Switching {packageLabel(current)} → {packageLabel(pkg)}
             </p>
             {diff.add.length > 0 && <div className="flex gap-3"><span className="w-36 shrink-0">Adds {diff.add.length}</span>{chips(diff.add, "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300")}</div>}
             {diff.remove.length > 0 && <div className="flex gap-3"><span className="w-36 shrink-0">Removes {diff.remove.length} not started</span>{chips(diff.remove, "border border-dashed border-slate-300 dark:border-slate-600 text-slate-500")}</div>}
