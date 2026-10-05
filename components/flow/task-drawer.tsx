@@ -204,6 +204,9 @@ function useToolField(task: Task, key: string) {
   return { value: v, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV(e.target.value), onBlur: commit };
 }
 
+// Gemini notes usually land within an hour of the call ending.
+const callIsOver = (iso: string) => new Date(iso).getTime() < Date.now() - 3 * 3600e3;
+
 function ToolPanel({
   task,
   client,
@@ -238,6 +241,12 @@ function ToolPanel({
                   <a className="underline" href={client.call_notes_url} target="_blank" rel="noopener noreferrer">Notes by Gemini</a>
                 </>
               )}
+            </p>
+          )}
+          {client.call_at && !client.call_notes_url && !String(task.tool_state?.transcript ?? "").trim() && callIsOver(client.call_at) && (
+            <p className="text-xs text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10 rounded-md px-3 py-2">
+              Gemini didn&apos;t take notes on this call, so there&apos;s nothing to pull in. Paste your notes or the transcript below. Next time, click{" "}
+              <b>Take notes with Gemini</b> in Meet and they&apos;ll arrive here by themselves.
             </p>
           )}
           <div>

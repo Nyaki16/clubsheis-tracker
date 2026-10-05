@@ -6,7 +6,6 @@ import { ChevronDown, LayoutGrid, List, Plus, Search, X } from "lucide-react";
 import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { bulkUpdateClients, revivePastLead, startFlow, type BulkClientChange } from "@/app/actions/flow";
-import Avatar from "@/components/avatar";
 import { PhaseDot, ProgressBar, dueInfo, useToast } from "@/components/flow/ui";
 import { NewClientModal } from "@/components/flow/client-modals";
 import { MigrationNotice } from "@/components/flow/migration-notice";
@@ -75,7 +74,6 @@ export default function FlowClientsList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [tab, clients, needle, pkg]
   );
-  const owner = (id: string | null) => profiles.find((p) => p.id === id);
 
   const groups: Group[] = useMemo(() => {
     if (group === "none") return [{ key: "all", label: "", clients: list }];
@@ -287,7 +285,6 @@ export default function FlowClientsList({
                           key={c.id}
                           c={c}
                           ts={tasksByClient[c.id] ?? []}
-                          lead={owner(c.lead_id)}
                           selected={sel.has(c.id)}
                           onSelect={(on) => toggle([c.id], on)}
                           onOpen={() => router.push(`/clients/${c.id}`)}
@@ -299,7 +296,6 @@ export default function FlowClientsList({
                     <ClientTable
                       list={g.clients}
                       tasksByClient={tasksByClient}
-                      owner={owner}
                       sel={sel}
                       toggle={toggle}
                       allIn={allIn}
@@ -443,7 +439,6 @@ function flowInfo(ts: Task[]) {
 function ClientCard({
   c,
   ts,
-  lead,
   selected,
   onSelect,
   onOpen,
@@ -451,7 +446,6 @@ function ClientCard({
 }: {
   c: Client;
   ts: Task[];
-  lead: Profile | undefined;
   selected: boolean;
   onSelect: (on: boolean) => void;
   onOpen: () => void;
@@ -481,7 +475,6 @@ function ClientCard({
           <p className="font-semibold truncate">{c.name}</p>
           <p className="text-xs text-slate-400 truncate">{c.business_name || c.email || " "}</p>
         </div>
-        {lead && <Avatar name={lead.name} url={lead.avatar_url} size="md" />}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {ts.length ? (
@@ -523,7 +516,6 @@ function ClientCard({
 function ClientTable({
   list,
   tasksByClient,
-  owner,
   sel,
   toggle,
   allIn,
@@ -532,7 +524,6 @@ function ClientTable({
 }: {
   list: Client[];
   tasksByClient: Record<string, Task[]>;
-  owner: (id: string | null) => Profile | undefined;
   sel: Set<string>;
   toggle: (ids: string[], on: boolean) => void;
   allIn: (ids: string[]) => boolean;
@@ -542,7 +533,7 @@ function ClientTable({
   const ids = list.map((c) => c.id);
   return (
     <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[860px] text-sm">
+      <table className="w-full min-w-[760px] text-sm">
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
             <th className="pl-4 py-2.5 w-8">
@@ -553,14 +544,12 @@ function ClientTable({
             <th className="px-4 py-2.5 font-semibold">Phase</th>
             <th className="px-4 py-2.5 font-semibold">Progress</th>
             <th className="px-4 py-2.5 font-semibold">Next task</th>
-            <th className="px-4 py-2.5 font-semibold">Lead</th>
           </tr>
         </thead>
         <tbody>
           {list.map((c) => {
             const ts = tasksByClient[c.id] ?? [];
             const { done, next, ph, due, pct } = flowInfo(ts);
-            const lead = owner(c.lead_id);
             const selected = sel.has(c.id);
             return (
               <tr
@@ -610,7 +599,6 @@ function ClientTable({
                     <p className="text-xs text-emerald-600">All done</p>
                   ) : null}
                 </td>
-                <td className="px-4 py-3">{lead && <Avatar name={lead.name} url={lead.avatar_url} size="md" />}</td>
               </tr>
             );
           })}
