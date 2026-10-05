@@ -3,6 +3,7 @@ import { join } from "path";
 import { createClient } from "@/lib/supabase/server";
 import { loadProposalContext, proposalFilename, type ProposalState } from "@/lib/proposal-server";
 import { buildProposalPdf } from "@/lib/proposal-pdf";
+import { CLIENT_SENDER } from "@/lib/sender";
 import { PUBLIC_APP_URL, emailHtml, sendGmail, type Attachment } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -42,6 +43,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ taskId:
       text: body,
       html: emailHtml(body, `${PUBLIC_APP_URL}/api/track/${taskId}`),
       attachments,
+      fromName: CLIENT_SENDER.name,
+      replyTo: CLIENT_SENDER.replyTo,
+      cc: CLIENT_SENDER.proposalCc,
     });
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : "Couldn't send the email." }, { status: 500 });

@@ -9,6 +9,7 @@ import type { ProposalState } from "@/lib/proposal-server";
 import type { Client, Task } from "@/lib/types";
 import { updateToolState } from "@/app/actions/flow";
 import { useToast } from "./ui";
+import { CLIENT_SENDER } from "@/lib/sender";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5";
@@ -255,7 +256,7 @@ function ProposalEditor({
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Couldn't send.");
-      toast(`Sent to ${to} with the proposal PDF and About Us attached`);
+      toast(`Sent to ${to} (cc ${CLIENT_SENDER.proposalCc}) with the proposal PDF and About Us attached`);
       router.refresh();
     } catch (e) {
       setSendError(e instanceof Error ? e.message : "Couldn't send.");
@@ -331,6 +332,10 @@ function ProposalEditor({
             {!client.email && onEditClient && (
               <button className="text-xs underline whitespace-nowrap" onClick={onEditClient}>Save to client</button>
             )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 w-14">Cc</span>
+            <span className="text-slate-600 dark:text-slate-300">{CLIENT_SENDER.proposalCc}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-slate-400 w-14">Subject</span>

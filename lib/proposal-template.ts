@@ -11,6 +11,8 @@
  * validated against PROPOSAL_JSON_SCHEMA via structured outputs.
  */
 
+import { CLIENT_SENDER } from './sender'
+
 /** Colours sampled directly from the approved Khanyisa Phika proposal. */
 export const PALETTE = {
   accent: '#70262D',   // deep burgundy — headings, prices, eyebrows
@@ -345,7 +347,7 @@ export function buildProposalEmailBody(
   }
 
   out.push('Any questions at all, just reply to this email.')
-  out.push('Warm regards,\nNyaki & Kopano — ClubSheIs')
+  out.push(CLIENT_SENDER.signOff)
 
   return out.join('\n\n')
 }

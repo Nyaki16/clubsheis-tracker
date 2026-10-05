@@ -29,7 +29,17 @@ export function emailHtml(body: string, trackingPixelUrl?: string) {
   return html;
 }
 
-export async function sendGmail(opts: { to: string; subject: string; text: string; html: string; attachments?: Attachment[] }) {
+export async function sendGmail(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: Attachment[];
+  /** Display name on the From line; the address is always GMAIL_USER. */
+  fromName?: string;
+  replyTo?: string;
+  cc?: string;
+}) {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) {
@@ -37,9 +47,10 @@ export async function sendGmail(opts: { to: string; subject: string; text: strin
   }
   const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
   await transporter.sendMail({
-    from: process.env.GMAIL_FROM_NAME ? `${process.env.GMAIL_FROM_NAME} <${user}>` : user,
-    replyTo: user,
+    from: opts.fromName ? `${opts.fromName} <${user}>` : process.env.GMAIL_FROM_NAME ? `${process.env.GMAIL_FROM_NAME} <${user}>` : user,
+    replyTo: opts.replyTo ?? user,
     to: opts.to,
+    ...(opts.cc ? { cc: opts.cc } : {}),
     subject: opts.subject,
     text: opts.text,
     html: opts.html,

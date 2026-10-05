@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { CLIENT_SENDER } from "@/lib/sender";
 import { emailHtml, sendGmail } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Add an email address, a subject and the message." }, { status: 400 });
   }
   try {
-    await sendGmail({ to: to.trim(), subject: subject.trim(), text: body, html: emailHtml(body) });
+    await sendGmail({ to: to.trim(), subject: subject.trim(), text: body, html: emailHtml(body), fromName: CLIENT_SENDER.name, replyTo: CLIENT_SENDER.replyTo });
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : "Couldn't send the email." }, { status: 500 });
   }

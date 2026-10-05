@@ -72,7 +72,7 @@ export function proposalPrompt(opts: { client: Client; discovery: Task | null; t
   const { client, discovery, tiers, notes, cards, taskNotes, meetings, callNotes, yellowSheet, profile } = opts;
   const ts = discovery?.tool_state ?? {};
   const fixed = cards?.filter((c) => c.name.trim() || c.price.trim()) ?? [];
-  return `You are writing a client proposal for Club She Is, a digital marketing and content production agency in South Africa run by Kopano Shimange and Nyaki Tshabangu.
+  return `You are writing a client proposal for Club She Is, a digital marketing and content production agency in South Africa. The client's contact is Gizelle, our Client Success Manager: any call, kick-off or check-in in the next steps is with Gizelle. Don't name anyone else on the team.
 
 CLIENT INFO:
 - Name: ${client.name}

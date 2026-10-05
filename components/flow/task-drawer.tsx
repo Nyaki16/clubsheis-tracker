@@ -13,6 +13,7 @@ import { DebbieBadge, PhaseDot, StatusSelect, useToast } from "./ui";
 import ProposalTool from "./proposal-tool";
 import GenTool from "./gen-tool";
 import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
+import { CLIENT_SENDER } from "@/lib/sender";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5";
@@ -367,7 +368,7 @@ function DiscoveryNext({
   const [thanks, setThanks] = useState(
     String(
       ts.thanks ??
-        `Hi ${first},\n\nThank you for taking the time to chat with us. Right now we're not the best fit for what you need, and we'd rather tell you that honestly than sell you something that won't serve you. If things change, our door is always open.\n\nWarm regards,\nNyaki & Kopano — ClubSheIs`
+        `Hi ${first},\n\nThank you for taking the time to chat with us. Right now we're not the best fit for what you need, and we'd rather tell you that honestly than sell you something that won't serve you. If things change, our door is always open.\n\n${CLIENT_SENDER.signOff}`
     )
   );
   const [to, setTo] = useState(client.email ?? "");
