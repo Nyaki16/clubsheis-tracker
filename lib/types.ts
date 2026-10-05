@@ -98,6 +98,8 @@ export type Client = {
   ghutte_user_id?: string | null;
   ghutte_login_sent_at?: string | null;
   ghutte_error?: string | null;
+  /** null = automatic; true / false = moved in or out of Operational by hand (0029). */
+  operational?: boolean | null;
   clock_started_on: string | null;
   created_at: string;
 };

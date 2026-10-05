@@ -183,6 +183,8 @@ export type ClientDetailsInput = {
   instagram_url?: string | null;
   google_drive_url?: string | null;
   lead_id?: string | null;
+  /** null = automatic. */
+  operational?: boolean | null;
 };
 
 export async function updateClientDetails(clientId: string, input: ClientDetailsInput) {
@@ -190,7 +192,7 @@ export async function updateClientDetails(clientId: string, input: ClientDetails
   const payload: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {
     if (v === undefined) continue;
-    payload[k] = k === "lead_id" ? v || null : clean(v as string | null);
+    payload[k] = k === "lead_id" ? v || null : k === "operational" ? v : clean(v as string | null);
   }
   if (payload.name === null) delete payload.name;
   if (!Object.keys(payload).length) return;
@@ -396,7 +398,8 @@ async function revive(supabase: Awaited<ReturnType<typeof createClient>>, client
 export type BulkClientChange =
   | { kind: "package"; pkg: PackageId }
   | { kind: "lead"; leadId: string | null }
-  | { kind: "past"; past: boolean };
+  | { kind: "past"; past: boolean }
+  | { kind: "operational"; value: boolean | null };
 
 /** Apply one change to a batch of clients (the page sends them in small chunks). */
 export async function bulkUpdateClients(ids: string[], change: BulkClientChange) {
@@ -407,7 +410,10 @@ export async function bulkUpdateClients(ids: string[], change: BulkClientChange)
   if (ids.length > 25) throw new Error("Send at most 25 clients at a time.");
   let added = 0;
   let removed = 0;
-  if (change.kind === "lead") {
+  if (change.kind === "operational") {
+    const { error } = await supabase.from("clients").update({ operational: change.value }).in("id", ids);
+    if (error) throw new Error(error.message);
+  } else if (change.kind === "lead") {
     const { error } = await supabase.from("clients").update({ lead_id: change.leadId || null }).in("id", ids);
     if (error) throw new Error(error.message);
   } else if (change.kind === "past" && change.past) {

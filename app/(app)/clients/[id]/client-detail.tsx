@@ -25,6 +25,7 @@ import {
   deleteClientDate,
   updateClientDate,
 } from "@/app/actions/client-dates";
+import TaskPanel from "@/components/flow/task-panel";
 import { TaskGridHeader, TaskGridRow } from "@/components/task-row";
 import BulkActionBar from "@/components/bulk-action-bar";
 import ProgressDonut from "@/components/progress-donut";
@@ -449,6 +450,7 @@ function JobTasksSection({
   selected: Set<string>;
   onToggleSelected: (id: string) => void;
 }) {
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
 
   return (
@@ -478,8 +480,12 @@ function JobTasksSection({
             profiles={profiles}
             selected={selected.has(task.id)}
             onToggleSelected={() => onToggleSelected(task.id)}
+            onOpen={() => setOpenTaskId(task.id)}
           />
         ))}
+        {openTaskId && tasks.some((t) => t.id === openTaskId) && (
+          <TaskPanel task={tasks.find((t) => t.id === openTaskId)!} profiles={profiles} onClose={() => setOpenTaskId(null)} />
+        )}
       </div>
 
       {showNew && (

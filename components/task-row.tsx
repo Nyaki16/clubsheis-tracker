@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Link as LinkIcon,
+  Pencil,
   Star,
   UserCog,
   X,
@@ -46,9 +47,12 @@ const COL_KEYS = [
   "status",
 ] as const;
 
-const DEFAULT_COL_WIDTHS: number[] = [2, 3, 2, 1, 1, 2, 2, 2];
+const DEFAULT_COL_WIDTHS: number[] = [1.8, 4, 3, 1, 1.2, 1.8, 1.4, 2];
 const MIN_FR = 0.5;
-const STORAGE_KEY = "task-grid.widths.v1";
+// The Task column never squeezes below this, so titles stay readable.
+const MIN_TASK_FR = 2;
+// v2: new defaults (v1 widths could squeeze the Task column to nothing).
+const STORAGE_KEY = "task-grid.widths.v2";
 
 let _widths: number[] = [...DEFAULT_COL_WIDTHS];
 let _widthsLoaded = false;
@@ -121,6 +125,7 @@ function ColResizeHandle({ index }: { index: number }) {
           const a = start[index] + dFr;
           const b = start[index + 1] - dFr;
           if (a < MIN_FR || b < MIN_FR) return;
+          if ((index === 1 && a < MIN_TASK_FR) || (index + 1 === 1 && b < MIN_TASK_FR)) return;
           const next = [...start];
           next[index] = a;
           next[index + 1] = b;
@@ -372,6 +377,7 @@ export function TaskGridRow({
   profiles,
   selected,
   onToggleSelected,
+  onOpen,
 }: {
   task: Task;
   job: Job | null;
@@ -379,6 +385,8 @@ export function TaskGridRow({
   profiles: Profile[];
   selected?: boolean;
   onToggleSelected?: () => void;
+  /** Open the task's side panel. Without it, clicking the title renames it. */
+  onOpen?: () => void;
 }) {
   const { gridTemplate } = useColumnWidths();
   const [, startTransition] = useTransition();
@@ -555,7 +563,7 @@ export function TaskGridRow({
           ["--cols" as string]: gridTemplate,
         } as React.CSSProperties
       }
-      className={`grid grid-cols-1 md:[grid-template-columns:var(--cols)] gap-3 px-5 py-3 group items-start ${
+      className={`grid grid-cols-1 md:[grid-template-columns:var(--cols)] gap-x-4 gap-y-2 px-5 py-4 group items-start ${
         selected ? "bg-slate-100 dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-800"
       }`}
     >
@@ -600,16 +608,31 @@ export function TaskGridRow({
               className="flex-1 min-w-0 text-sm font-medium leading-tight border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-slate-900 dark:focus:border-slate-300"
             />
           ) : (
-            <button
-              onClick={() => setEditingTitle(true)}
-              className="text-left text-sm font-medium leading-tight hover:bg-slate-100 dark:hover:bg-slate-700 rounded px-1.5 py-0.5 -mx-1.5 flex-1 min-w-0 truncate"
-            >
-              {task.title}
-            </button>
+            <>
+              <button
+                onClick={() => (onOpen ? onOpen() : setEditingTitle(true))}
+                title={onOpen ? "Open task" : "Rename"}
+                className="text-left text-sm font-medium leading-snug hover:bg-slate-100 dark:hover:bg-slate-700 hover:underline underline-offset-2 rounded px-1.5 py-0.5 -mx-1.5 flex-1 min-w-0 line-clamp-2 break-words"
+              >
+                {task.title}
+              </button>
+              {onOpen && (
+                <button
+                  onClick={() => setEditingTitle(true)}
+                  aria-label="Rename task"
+                  title="Rename"
+                  className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
           )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 px-1.5 -mx-0">
+          {job && <span className="text-xs text-slate-500 dark:text-slate-400">{job.name}</span>}
           {task.debbie_recommended && <DebbieBadge source={task.debbie_source} />}
         </div>
-        {job && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 px-1.5">{job.name}</p>}
       </div>
 
       <div className="min-w-0 pt-1">
@@ -646,7 +669,7 @@ export function TaskGridRow({
             ) : (
               <ChevronRight className="w-3 h-3 mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500" />
             )}
-            <span className={notesExpanded ? "whitespace-pre-wrap" : "truncate"}>
+            <span className={notesExpanded ? "whitespace-pre-wrap max-h-60 overflow-y-auto" : "line-clamp-2 break-words"}>
               {task.notes}
             </span>
           </button>

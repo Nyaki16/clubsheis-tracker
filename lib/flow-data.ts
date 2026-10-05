@@ -15,6 +15,8 @@ export async function loadFlowData(supabase: SB) {
     supabase.from("pricing_tiers").select("*").order("position"),
     supabase.from("app_settings").select("value").eq("key", "calendar_sync").maybeSingle(),
   ]);
+  // Clients with ordinary jobs (not the flow), for the Operational rule.
+  const { data: otherJobs } = await supabase.from("jobs").select("client_id").neq("kind", "flow");
   const flowJobs = (jobsRes.data ?? []) as Job[];
   const jobIds = flowJobs.map((j) => j.id);
   const tasksRes = jobIds.length
@@ -38,6 +40,7 @@ export async function loadFlowData(supabase: SB) {
     calendarSync: (syncRes.data?.value as Record<string, unknown> | undefined) ?? null,
     tasksByClient: Object.fromEntries(tasksByClient) as Record<string, Task[]>,
     meId: userRes.data.user?.id ?? null,
+    clientsWithJobs: [...new Set((otherJobs ?? []).map((j) => j.client_id as string))],
     migrated: !templatesRes.error,
   };
 }

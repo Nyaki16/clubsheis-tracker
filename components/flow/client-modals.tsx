@@ -216,6 +216,7 @@ export function EditClientModal({
     google_drive_url: client.google_drive_url ?? "",
     lead_id: client.lead_id ?? "",
   });
+  const [operational, setOperational] = useState(client.operational === true ? "yes" : client.operational === false ? "no" : "auto");
   const current = (client.package ?? "lead") as PackageId;
   const [pkg, setPkg] = useState<PackageId>(current);
   const diff = useMemo(
@@ -228,7 +229,11 @@ export function EditClientModal({
     setError("");
     start(async () => {
       try {
-        await updateClientDetails(client.id, { ...d, lead_id: d.lead_id || null });
+        await updateClientDetails(client.id, {
+          ...d,
+          lead_id: d.lead_id || null,
+          operational: operational === "yes" ? true : operational === "no" ? false : null,
+        });
         if (pkg !== current) {
           const r = await changeClientPackage(client.id, pkg);
           toast(`Now ${packageLabel(pkg)}: ${r.added} tasks added, ${r.removed} removed`);
@@ -264,6 +269,14 @@ export function EditClientModal({
         }
       >
         <DetailFields d={d} set={(k, v) => setD((x) => ({ ...x, [k]: v }))} profiles={profiles} />
+        <div>
+          <label className={label} htmlFor="c-operational">Operational</label>
+          <select id="c-operational" className={field} value={operational} onChange={(e) => setOperational(e.target.value)}>
+            <option value="auto">Automatic (flow finished, or jobs but no flow)</option>
+            <option value="yes">Yes, always show as Operational</option>
+            <option value="no">No, keep them in their phase</option>
+          </select>
+        </div>
         <PackagePicker value={pkg} onChange={setPkg} includeLead={current === "lead"} />
         {diff && (
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-3 flex flex-col gap-2 text-xs" aria-live="polite">

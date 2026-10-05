@@ -48,6 +48,12 @@ export default function TaskDrawer({
     setNotesFrom(task.notes);
     setNotes(task.notes);
   }
+  const [title, setTitle] = useState(task.title);
+  const [titleFrom, setTitleFrom] = useState(task.title);
+  if (task.title !== titleFrom) {
+    setTitleFrom(task.title);
+    setTitle(task.title);
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -87,7 +93,14 @@ export default function TaskDrawer({
             <span>{phase?.label ?? "Task"}</span>
           </div>
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-lg font-semibold">{task.title}</h2>
+            <input
+              aria-label="Task name"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => title.trim() && title.trim() !== task.title && save({ title: title.trim() })}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="flex-1 min-w-0 text-lg font-semibold bg-transparent rounded-md px-1.5 py-0.5 -mx-1.5 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-purple-500 outline-none"
+            />
             <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1">
               <X className="w-5 h-5" />
             </button>

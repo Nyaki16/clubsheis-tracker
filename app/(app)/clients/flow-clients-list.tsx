@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LayoutGrid, List, Plus, Search, X } from "lucide-react";
-import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId } from "@/lib/flow";
+import { PHASES, currentPhase, isDone, isOperational, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { bulkUpdateClients, revivePastLead, startFlow, type BulkClientChange } from "@/app/actions/flow";
 import { PhaseDot, ProgressBar, dueInfo, useToast } from "@/components/flow/ui";
@@ -28,6 +28,7 @@ export default function FlowClientsList({
   tasksByClient,
   meId,
   migrated,
+  clientsWithJobs = [],
   initialView = "grid",
   initialGroup = "phase",
 }: {
@@ -37,6 +38,7 @@ export default function FlowClientsList({
   tasksByClient: Record<string, Task[]>;
   meId: string | null;
   migrated: boolean;
+  clientsWithJobs?: string[];
   initialView?: ClientsView;
   initialGroup?: ClientsGroup;
 }) {
@@ -75,12 +77,16 @@ export default function FlowClientsList({
     [tab, clients, needle, pkg]
   );
 
+  const withJobs = useMemo(() => new Set(clientsWithJobs), [clientsWithJobs]);
+  const operational = (c: Client) => isOperational(c, tasksByClient[c.id] ?? [], withJobs.has(c.id));
+
   const groups: Group[] = useMemo(() => {
     if (group === "none") return [{ key: "all", label: "", clients: list }];
     const out: Group[] =
       group === "phase"
         ? [
             ...PHASES.map((p) => ({ key: p.id as string, label: p.label as string, dot: p.dot as string, clients: [] as Client[] })),
+            { key: "operational", label: "Operational", dot: "bg-violet-500", clients: [] },
             { key: "none", label: "Flow not started", dot: "bg-slate-300", clients: [] },
           ]
         : [
@@ -88,11 +94,12 @@ export default function FlowClientsList({
             { key: "none", label: "Flow not started", clients: [] },
           ];
     for (const c of list) {
-      const key = group === "phase" ? currentPhase(tasksByClient[c.id] ?? []) ?? "none" : c.package ?? "none";
+      const key =
+        group === "phase" ? (isOperational(c, tasksByClient[c.id] ?? [], withJobs.has(c.id)) ? "operational" : currentPhase(tasksByClient[c.id] ?? []) ?? "none") : c.package ?? "none";
       (out.find((g) => g.key === key) ?? out[out.length - 1]).clients.push(c);
     }
     return out.filter((g) => g.clients.length);
-  }, [group, list, tasksByClient, PACKAGES]);
+  }, [group, list, tasksByClient, PACKAGES, withJobs]);
 
   // ── Selection + bulk edit ──
   const toggle = (ids: string[], on: boolean) =>
@@ -109,7 +116,7 @@ export default function FlowClientsList({
 
   async function bulk(change: BulkClientChange, doneMsg: (r: { added: number; removed: number }) => string) {
     const ids = [...sel];
-    const size = change.kind === "lead" || (change.kind === "past" && change.past) ? 25 : 4;
+    const size = change.kind === "lead" || change.kind === "operational" || (change.kind === "past" && change.past) ? 25 : 4;
     const total = { added: 0, removed: 0 };
     setBusy({ done: 0, total: ids.length });
     try {
@@ -285,6 +292,7 @@ export default function FlowClientsList({
                           key={c.id}
                           c={c}
                           ts={tasksByClient[c.id] ?? []}
+                          operational={operational(c)}
                           selected={sel.has(c.id)}
                           onSelect={(on) => toggle([c.id], on)}
                           onOpen={() => router.push(`/clients/${c.id}`)}
@@ -296,6 +304,7 @@ export default function FlowClientsList({
                     <ClientTable
                       list={g.clients}
                       tasksByClient={tasksByClient}
+                      operational={operational}
                       sel={sel}
                       toggle={toggle}
                       allIn={allIn}
@@ -341,6 +350,24 @@ export default function FlowClientsList({
                       ))}
                     </select>
                     <LeadSelect profiles={profiles} onPick={(id, name) => bulk({ kind: "lead", leadId: id }, () => `${name} now leads ${plural(n)}`)} />
+                    <select
+                      value=""
+                      aria-label="Operational for the selected clients"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (!v) return;
+                        const value = v === "in" ? true : v === "out" ? false : null;
+                        bulk({ kind: "operational", value }, () =>
+                          value === true ? `${plural(n)} moved to Operational` : value === false ? `${plural(n)} kept out of Operational` : `${plural(n)} back to automatic`
+                        );
+                      }}
+                      className="bulk-select"
+                    >
+                      <option value="">Operational…</option>
+                      <option value="in">Move to Operational</option>
+                      <option value="out">Take out of Operational</option>
+                      <option value="auto">Automatic</option>
+                    </select>
                     <button onClick={() => bulk({ kind: "past", past: true }, () => `${plural(n)} moved to Past leads`)} className="bulk-btn">
                       Move to Past leads
                     </button>
@@ -439,6 +466,7 @@ function flowInfo(ts: Task[]) {
 function ClientCard({
   c,
   ts,
+  operational,
   selected,
   onSelect,
   onOpen,
@@ -446,6 +474,7 @@ function ClientCard({
 }: {
   c: Client;
   ts: Task[];
+  operational: boolean;
   selected: boolean;
   onSelect: (on: boolean) => void;
   onOpen: () => void;
@@ -480,11 +509,18 @@ function ClientCard({
         {ts.length ? (
           <>
             <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded border ${pkgBadge(c.package)}`}>{packageLabel(c.package, true)}</span>
-            {ph && (
+            {operational ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                <PhaseDot phase={ph} />
-                {PHASES.find((p) => p.id === ph)?.label}
+                <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
+                Operational
               </span>
+            ) : (
+              ph && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <PhaseDot phase={ph} />
+                  {PHASES.find((p) => p.id === ph)?.label}
+                </span>
+              )
             )}
           </>
         ) : (
@@ -516,6 +552,7 @@ function ClientCard({
 function ClientTable({
   list,
   tasksByClient,
+  operational,
   sel,
   toggle,
   allIn,
@@ -524,6 +561,7 @@ function ClientTable({
 }: {
   list: Client[];
   tasksByClient: Record<string, Task[]>;
+  operational: (c: Client) => boolean;
   sel: Set<string>;
   toggle: (ids: string[], on: boolean) => void;
   allIn: (ids: string[]) => boolean;
@@ -572,7 +610,12 @@ function ClientTable({
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {ph ? (
+                  {operational(c) ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
+                      Operational
+                    </span>
+                  ) : ph ? (
                     <span className="inline-flex items-center gap-1.5">
                       <PhaseDot phase={ph} />
                       {PHASES.find((p) => p.id === ph)?.label}

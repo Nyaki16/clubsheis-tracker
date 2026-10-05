@@ -167,3 +167,15 @@ export function packageDiff(
   const add = template.filter((x) => !tasks.some((t) => t.title === x.title));
   return { keepStarted, remove, add };
 }
+
+/**
+ * Operational: an ongoing client rather than one moving through the flow. The
+ * team can move anyone in or out by hand; otherwise it's automatic: their
+ * client flow is finished, or they have jobs but no client flow at all.
+ */
+export function isOperational(client: { operational?: boolean | null }, flowTasks: Pick<Task, "status">[], hasOtherJobs: boolean) {
+  if (client.operational === true) return true;
+  if (client.operational === false) return false;
+  if (flowTasks.length) return flowTasks.every(isDone);
+  return hasOtherJobs;
+}

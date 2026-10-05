@@ -19,6 +19,7 @@ import { isOverdue, isThisWeek, isToday } from "@/lib/utils";
 import { createTask } from "@/app/actions/tasks";
 import { createJob } from "@/app/actions/jobs";
 import { useToast } from "@/components/flow/ui";
+import TaskPanel from "@/components/flow/task-panel";
 
 type GroupBy = "assignee" | "client" | "none";
 
@@ -47,6 +48,8 @@ export default function DailyClient({
 }) {
   const searchParams = useSearchParams();
   const toast = useToast();
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const openTask = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null;
   const [search, setSearch] = useState("");
   const [filterAssignee, setFilterAssignee] = useState(() =>
     searchParams.get("assignee") === "unassigned" ? "unassigned" : "all"
@@ -527,6 +530,7 @@ export default function DailyClient({
                     profiles={profiles}
                     selected={selected.has(task.id)}
                     onToggleSelected={() => toggleSelected(task.id)}
+                    onOpen={() => setOpenTaskId(task.id)}
                   />
                 ))}
                 {g.list.length === 0 && (
@@ -551,6 +555,8 @@ export default function DailyClient({
           </div>
         )}
       </div>
+
+      {openTask && <TaskPanel task={openTask} profiles={profiles} onClose={() => setOpenTaskId(null)} />}
 
       {showNewJob && (
         <Modal title="New job" onClose={() => setShowNewJob(false)}>
