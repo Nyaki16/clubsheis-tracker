@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { YS_SECTIONS, type YsKey } from "@/lib/yellow-sheet";
+import { YS_SECTIONS, countWords, type YsKey } from "@/lib/yellow-sheet";
 
 // ClubSheIs brand on the client-facing form (same burgundy as the proposal PDF).
 const ACCENT = "#70262D";
@@ -42,6 +42,13 @@ export default function YellowSheetForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    // Answers that need detail: stop on the first one that's too short.
+    const short = YS_SECTIONS.flatMap((s) => s.fields).find((f) => f.minWords && countWords(values[f.key] ?? "") < f.minWords);
+    if (short) {
+      setError(`“${short.label}” needs a bit more detail: at least ${short.minWords} words (you have ${countWords(values[short.key] ?? "")}). Use the questions above it as a guide.`);
+      document.getElementById(`ys-${short.key}`)?.focus();
+      return;
+    }
     setState("sending");
     try {
       const res = await fetch(`/api/yellow-sheet/${taskId}`, {
@@ -115,12 +122,20 @@ export default function YellowSheetForm({
                         {f.label}
                         {f.required && <span style={{ color: ACCENT }}> *</span>}
                       </label>
+                      {f.guide && (
+                        <ul className="text-sm text-[#685B5A] dark:text-stone-400 list-disc pl-5 flex flex-col gap-0.5 mb-1">
+                          {f.guide.map((g) => (
+                            <li key={g}>{g}</li>
+                          ))}
+                        </ul>
+                      )}
                       {f.rows === 1 ? (
                         <input {...common} type={f.type ?? "text"} required={f.required} autoComplete={AUTOCOMPLETE[f.key]} />
                       ) : (
                         <textarea {...common} rows={f.rows} required={f.required} />
                       )}
                       {f.hint && <p className="text-xs text-[#685B5A] dark:text-stone-500">{f.hint}</p>}
+                      {f.minWords && <WordCount words={countWords(values[f.key] ?? "")} min={f.minWords} target={f.targetWords ?? f.minWords} />}
                     </div>
                   );
                 })}
@@ -142,5 +157,16 @@ export default function YellowSheetForm({
         <footer className="text-xs text-[#685B5A] dark:text-stone-500">Club She Is · info@clubsheis.com</footer>
       </div>
     </main>
+  );
+}
+
+function WordCount({ words, min, target }: { words: number; min: number; target: number }) {
+  const tone = words >= target ? "text-emerald-700 dark:text-emerald-400" : words >= min ? "text-[#685B5A] dark:text-stone-400" : "text-[#70262D] dark:text-rose-300";
+  const note =
+    words >= target ? "Great, that's plenty to work with." : words >= min ? `Good. Aim for ${target}+ words if you can.` : `At least ${min} words, ideally ${target}+.`;
+  return (
+    <p className={`text-xs tabular-nums ${tone}`}>
+      {words} words · {note}
+    </p>
   );
 }

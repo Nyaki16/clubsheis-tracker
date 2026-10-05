@@ -16,7 +16,15 @@ export type YsField = {
   hint?: string;
   /** Pre-filled when empty. */
   initial?: string;
+  /** Questions shown under the label to draw out detail. */
+  guide?: string[];
+  /** The answer can't be sent shorter than this. */
+  minWords?: number;
+  /** What a really useful answer looks like. */
+  targetWords?: number;
 };
+
+export const countWords = (t: string) => t.split(/\s+/).filter(Boolean).length;
 
 export const YS_SECTIONS: { title: string; fields: YsField[] }[] = [
   {
@@ -37,10 +45,42 @@ export const YS_SECTIONS: { title: string; fields: YsField[] }[] = [
     title: "Your business",
     fields: [
       { key: "company_name", label: "Company name", placeholder: "Your registered company name", rows: 1, hint: "The legal registered name, as on your CIPC documents." },
-      { key: "business_name", label: "Business trading name", placeholder: "The name your clients know, e.g. Glow Studio", rows: 1, half: true },
+      { key: "business_name", label: "Business trading name", placeholder: "e.g. Glow Studio", hint: "The name your clients know you by.", rows: 1, half: true },
       { key: "website", label: "Website", placeholder: "https://yourwebsite.co.za", rows: 1, type: "url", half: true },
-      { key: "business", label: "What your business does and who you serve", placeholder: "In a few sentences: what you do, for whom, and where.", rows: 3 },
-      { key: "story", label: "Your story", placeholder: "Why you started, what you've been through, what you believe.", rows: 4 },
+      {
+        key: "business",
+        label: "What your business does and who you serve",
+        placeholder: "Tell us everything, in your own words. The more detail, the better your copy.",
+        rows: 8,
+        required: true,
+        minWords: 80,
+        targetWords: 200,
+        guide: [
+          "What exactly do you sell: products, services, programmes?",
+          "Who buys from you: age, life stage, where they live, what they care about?",
+          "What problem do you solve for them, and what changes after they work with you?",
+          "Where do you operate (online, which city or country) and how do people find you now?",
+          "How long have you been running, and roughly how many clients or customers have you served?",
+          "What makes you different from others who do what you do?",
+        ],
+      },
+      {
+        key: "story",
+        label: "Your story",
+        placeholder: "Write it like you'd tell a friend over coffee. Don't worry about polish; we'll shape it.",
+        rows: 10,
+        required: true,
+        minWords: 100,
+        targetWords: 250,
+        guide: [
+          "Why did you start this business? What was happening in your life at the time?",
+          "What have you been through (setbacks, turning points) that shaped how you work?",
+          "What do you believe that others in your industry don't?",
+          "What experience, qualifications or results give you authority?",
+          "Tell us about a client moment that made it all worth it.",
+          "Where are you taking this business in the next year?",
+        ],
+      },
     ],
   },
   {

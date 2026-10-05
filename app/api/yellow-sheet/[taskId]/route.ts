@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { YS_FIELDS } from "@/lib/yellow-sheet";
+import { YS_FIELDS, countWords } from "@/lib/yellow-sheet";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ taskId:
   }
   if (!answers.phone?.trim() || !answers.email?.trim()) {
     return Response.json({ error: "Please add your phone number and business email before sending." }, { status: 400 });
+  }
+  const short = YS_FIELDS.find((f) => f.minWords && countWords(answers[f.key] ?? "") < f.minWords);
+  if (short) {
+    return Response.json({ error: `“${short.label}” needs at least ${short.minWords} words. The more detail you give us, the better your copy.` }, { status: 400 });
   }
   if (!answers.business?.trim() || !answers.offer?.trim()) {
     return Response.json({ error: "Please tell us about your business and your offer before sending." }, { status: 400 });
