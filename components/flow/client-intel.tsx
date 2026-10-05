@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ExternalLink, FileText, History, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
-import type { Client, ClientDocument, Meeting, Profile } from "@/lib/types";
+import type { Client, ClientDocument, Meeting, Profile, ProjectBrief, Task } from "@/lib/types";
 import { addMeeting, deleteMeeting, saveDocEdit, updateMeeting } from "@/app/actions/client-intel";
 import { useToast } from "./ui";
 import Markdown from "./markdown";
+import ProjectBriefs from "./project-briefs";
 
 type Kind = "profile" | "strategy";
+type Tab = Kind | "briefs";
 const TITLES: Record<Kind, string> = { profile: "Client Profile", strategy: "Strategy Brief" };
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const btn = "text-xs font-medium border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 inline-flex items-center gap-1.5";
@@ -20,15 +22,24 @@ export default function ClientIntel({
   meetings,
   docs,
   profiles,
+  briefs,
+  briefTasks,
+  discoveryWords,
+  hasFlow,
 }: {
   client: Client;
   meetings: Meeting[];
   docs: ClientDocument[];
   profiles: Profile[];
+  briefs: ProjectBrief[];
+  briefTasks: Task[];
+  discoveryWords: number;
+  hasFlow: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [kind, setKind] = useState<Kind>("strategy");
+  const [tab, setTab] = useState<Tab>("strategy");
+  const kind: Kind = tab === "briefs" ? "strategy" : tab;
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
   const versions = docs.filter((d) => d.kind === kind);
@@ -64,18 +75,25 @@ export default function ClientIntel({
       <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 dark:border-slate-800">
           <div role="tablist" className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5">
-            {(["strategy", "profile"] as Kind[]).map((k) => (
+            {(["strategy", "profile", "briefs"] as Tab[]).map((k) => (
               <button
                 key={k}
                 role="tab"
-                aria-selected={kind === k}
-                onClick={() => { setKind(k); setPickedId(null); setEditing(false); }}
-                className={`text-xs font-medium px-3 py-1 rounded-md ${kind === k ? "bg-white dark:bg-slate-900 shadow-sm" : "text-slate-500"}`}
+                aria-selected={tab === k}
+                onClick={() => { setTab(k); setPickedId(null); setEditing(false); }}
+                className={`text-xs font-medium px-3 py-1 rounded-md ${tab === k ? "bg-white dark:bg-slate-900 shadow-sm" : "text-slate-500"}`}
               >
-                {TITLES[k]}
+                {k === "briefs" ? (
+                  <>
+                    Project Briefs{briefs.length ? <span className="ml-1 text-slate-400 tabular-nums">{briefs.length}</span> : null}
+                  </>
+                ) : (
+                  TITLES[k]
+                )}
               </button>
             ))}
           </div>
+          {tab !== "briefs" && (
           <div className="flex flex-wrap items-center gap-2">
             {client.docs_dirty_at && !updating && (
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
@@ -92,10 +110,21 @@ export default function ClientIntel({
               {updating ? "Updating… about a minute" : doc ? "Update now" : "Write them now"}
             </button>
           </div>
+          )}
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-3">
-          {doc ? (
+          {tab === "briefs" ? (
+            <ProjectBriefs
+              client={client}
+              briefs={briefs}
+              meetings={meetings}
+              profiles={profiles}
+              briefTasks={briefTasks}
+              discoveryWords={discoveryWords}
+              hasFlow={hasFlow}
+            />
+          ) : doc ? (
             <>
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <FileText className="w-3.5 h-3.5" />

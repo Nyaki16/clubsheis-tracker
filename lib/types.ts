@@ -152,6 +152,8 @@ export type Task = {
   leave_request_id: string | null;
   debbie_recommended?: boolean;
   debbie_source?: { meeting_id: string; meeting_title: string; date: string | null; quote: string } | null;
+  /** Set when the task was sent from a project brief. */
+  brief_id?: string | null;
   // Client flow
   phase: "sales" | "onboarding" | "yellow" | "production" | "delivery" | null;
   tool: string | null;
@@ -293,4 +295,16 @@ export type ClientDocument = {
   created_by: string | null;
   gdoc_written: boolean;
   created_at: string;
+};
+
+export type ProjectBrief = {
+  id: string;
+  client_id: string;
+  title: string;
+  content: string;
+  sources: string[];
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
 };

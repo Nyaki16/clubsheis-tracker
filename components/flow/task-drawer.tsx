@@ -14,6 +14,8 @@ import ProposalTool from "./proposal-tool";
 import GenTool from "./gen-tool";
 import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
 import { CLIENT_SENDER } from "@/lib/sender";
+import { getBrief } from "@/app/actions/briefs";
+import Markdown from "./markdown";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5";
@@ -133,6 +135,8 @@ export default function TaskDrawer({
             </div>
           )}
 
+          {task.brief_id && <BriefBox key={task.brief_id} briefId={task.brief_id} />}
+
           <ToolPanel task={task} client={client} clientTasks={clientTasks} tiers={tiers} onOpenTask={onOpenTask} onEditClient={onEditClient} />
 
           <div>
@@ -176,6 +180,36 @@ export default function TaskDrawer({
 }
 
 // ── Built-in tools ──────────────────────────────────────────────────────────
+
+// The project brief this task was sent from, read fresh so edits on the client page show here.
+function BriefBox({ briefId }: { briefId: string }) {
+  const [brief, setBrief] = useState<Awaited<ReturnType<typeof getBrief>> | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    getBrief(briefId)
+      .then((b) => alive && setBrief(b))
+      .catch(() => alive && setBrief(null));
+    return () => {
+      alive = false;
+    };
+  }, [briefId]);
+  return (
+    <ToolBox title="Project brief">
+      {brief === undefined ? (
+        <p className="text-sm text-slate-400">Loading the brief…</p>
+      ) : brief ? (
+        <>
+          <Markdown text={brief.content} />
+          <Link href={`/clients/${brief.client_id}`} className="text-xs underline self-start">
+            Edit it on the client&apos;s page (Project Briefs)
+          </Link>
+        </>
+      ) : (
+        <p className="text-sm text-slate-400">This brief was deleted from the client&apos;s page.</p>
+      )}
+    </ToolBox>
+  );
+}
 
 function ToolBox({ title, right, children }: { title: string; right?: string; children: React.ReactNode }) {
   return (

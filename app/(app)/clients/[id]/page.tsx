@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchClientFlowDocs } from "@/lib/client-flow";
-import type { Client, ClientDate, ClientDocument, Job, Meeting, Profile, Task } from "@/lib/types";
+import type { Client, ClientDate, ClientDocument, Job, Meeting, Profile, ProjectBrief, Task } from "@/lib/types";
 import ClientIntel from "@/components/flow/client-intel";
 import type { FlowTemplate, PricingTier } from "@/lib/flow";
 import ClientDetail from "./client-detail";
@@ -23,7 +23,7 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [jobsRes, profilesRes, datesRes, templatesRes, tiersRes, clientFlowDocs, meetingsRes, docsRes] = await Promise.all([
+  const [jobsRes, profilesRes, datesRes, templatesRes, tiersRes, clientFlowDocs, meetingsRes, docsRes, briefsRes] = await Promise.all([
     supabase
       .from("jobs")
       .select("*")
@@ -40,6 +40,7 @@ export default async function ClientDetailPage({
     fetchClientFlowDocs(client.name),
     supabase.from("meeting_clients").select("meetings(*)").eq("client_id", id),
     supabase.from("client_documents").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(30),
+    supabase.from("project_briefs").select("*").eq("client_id", id).order("created_at", { ascending: false }),
   ]);
   const meetings = ((meetingsRes.data ?? []) as unknown as { meetings: Meeting | null }[])
     .map((r) => r.meetings)
@@ -58,6 +59,10 @@ export default async function ClientDetailPage({
   const otherTasks = tasks.filter((t) => t.job_id !== flowJob?.id);
   const profiles: Profile[] = profilesRes.data ?? [];
   const dates: ClientDate[] = datesRes.data ?? [];
+  const briefs = (briefsRes.data ?? []) as ProjectBrief[];
+  const discovery = flowTasks.find((t) => t.tool === "discovery")?.tool_state as Record<string, string> | undefined;
+  const words = (t: unknown) => String(t ?? "").split(/\s+/).filter(Boolean).length;
+  const discoveryWords = words(discovery?.need) + words(discovery?.transcript || client.call_notes) + words(client.call_message);
 
   return (
     <div className="flex flex-col gap-8">
@@ -71,7 +76,16 @@ export default async function ClientDetailPage({
       />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Profile, meetings &amp; other jobs</h2>
-        <ClientIntel client={client as Client} meetings={meetings} docs={(docsRes.data ?? []) as ClientDocument[]} profiles={profiles} />
+        <ClientIntel
+          client={client as Client}
+          meetings={meetings}
+          docs={(docsRes.data ?? []) as ClientDocument[]}
+          profiles={profiles}
+          briefs={briefs}
+          briefTasks={tasks.filter((t) => t.brief_id)}
+          discoveryWords={discoveryWords}
+          hasFlow={!!flowJob}
+        />
         <ClientDetail
           client={client as Client}
           jobs={otherJobs}
