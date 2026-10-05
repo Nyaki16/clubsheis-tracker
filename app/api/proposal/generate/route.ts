@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { loadProposalContext, proposalPrompt, type ProposalState } from "@/lib/proposal-server";
-import { PROPOSAL_JSON_SCHEMA, type ProposalData } from "@/lib/proposal-template";
+import { PROPOSAL_JSON_SCHEMA, type PricingCard, type ProposalData } from "@/lib/proposal-template";
 import type { PricingTier } from "@/lib/flow";
 
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { taskId, notes } = (await req.json()) as { taskId: string; notes?: string };
+  const { taskId, notes, cards } = (await req.json()) as { taskId: string; notes?: string; cards?: PricingCard[] };
   const ctx = await loadProposalContext(supabase, taskId);
   if (!ctx) return Response.json({ error: "Proposal task not found." }, { status: 404 });
 
@@ -35,7 +35,17 @@ export async function POST(req: Request) {
 
   const { data: tierRows } = await supabase.from("pricing_tiers").select("*").order("position");
   const tiers = (tierRows ?? []) as PricingTier[];
-  const prompt = proposalPrompt({ client: ctx.client, discovery: ctx.discovery, tiers, notes });
+  // Anything else said with this client since (or besides) the discovery call.
+  const { data: links } = await supabase.from("meeting_clients").select("meetings(title, starts_at, notes)").eq("client_id", ctx.client.id);
+  const transcript = String(ctx.discovery?.tool_state?.transcript ?? "").trim();
+  const meetings = ((links ?? []) as unknown as { meetings: { title: string; starts_at: string | null; notes: string } | null }[])
+    .map((l) => l.meetings)
+    .filter((m): m is { title: string; starts_at: string | null; notes: string } => !!m && !!m.notes.trim() && m.notes.trim() !== transcript)
+    .sort((a, b) => (b.starts_at ?? "").localeCompare(a.starts_at ?? ""))
+    .slice(0, 4)
+    .map((m) => ({ title: m.title, date: m.starts_at, notes: m.notes }));
+  const fixed = (cards ?? []).filter((c) => c.name?.trim() || c.price?.trim());
+  const prompt = proposalPrompt({ client: ctx.client, discovery: ctx.discovery, tiers, notes, cards: fixed, taskNotes: ctx.task.notes, meetings });
 
   const save = async (patch: ProposalState, status?: string) => {
     const payload: Record<string, unknown> = { tool_state: { ...(ctx.task.tool_state ?? {}), ...patch } };
@@ -88,6 +98,16 @@ export async function POST(req: Request) {
           .map((b) => (b.type === "text" ? b.text : ""))
           .join("");
         const data = JSON.parse(text) as ProposalData;
+        // The team's pricing is final: keep their names, prices and terms exactly.
+        if (fixed.length) {
+          data.cards = fixed.map((f, i) => ({
+            ...(data.cards[i] ?? { eyebrow: "", subtitle: "", features: [] }),
+            name: f.name,
+            price: f.price,
+            cadence: f.cadence,
+            totalNote: f.totalNote,
+          }));
+        }
 
         await save(
           { state: "ready", data, notes: notes ?? "", email_body: null, generated_at: new Date().toISOString(), error: undefined },

@@ -288,6 +288,7 @@ function renderCover(doc: Doc, data: ProposalData, clientName: string, dateLabel
 function renderOpportunity(doc: Doc, data: ProposalData) {
   doc.addPage()
   sectionOpen(doc, SECTION_LABELS[0], 'The ', 'opportunity', data.opportunityLead)
+  if (data.heard?.length) whatWeHeard(doc, data.heard)
   for (const p of data.opportunityParagraphs) {
     ensure(doc, 60)
     bodyPara(doc, p)
@@ -295,6 +296,36 @@ function renderOpportunity(doc: Doc, data: ProposalData) {
   }
   doc.moveDown(0.4)
   hairline(doc)
+}
+
+/** "What we heard": the call in short points, in a warm panel above the recap. */
+function whatWeHeard(doc: Doc, points: string[]) {
+  const innerW = CONTENT - 68
+  doc.font('Helvetica').fontSize(9)
+  const hLabel = doc.heightOfString('WHAT WE HEARD', { width: innerW, characterSpacing: 2 }) + 12
+  doc.font('Helvetica').fontSize(10)
+  const heights = points.map(p => Math.max(doc.heightOfString(p, { width: innerW - 18, lineGap: 3 }), 12))
+  const hPoints = heights.reduce((sum, h, i) => sum + h + (i < heights.length - 1 ? 8 : 0), 0)
+
+  tintedPanel(
+    doc,
+    PALETTE.panelWarm,
+    () => hLabel + hPoints,
+    (x, w) => {
+      let y = doc.y
+      doc.font('Helvetica').fontSize(9).fillColor(PALETTE.accent)
+        .text('WHAT WE HEARD', x, y, { width: w, characterSpacing: 2 })
+      y += hLabel
+      points.forEach((p, i) => {
+        diamond(doc, x + 3, y + 6)
+        doc.font('Helvetica').fontSize(10).fillColor(PALETTE.ink)
+          .text(p, x + 18, y, { width: w - 18, lineGap: 3 })
+        y += heights[i] + 8
+      })
+    },
+  )
+  doc.x = MARGIN
+  doc.moveDown(1.2)
 }
 
 function renderWhoWeAre(doc: Doc) {
@@ -349,13 +380,73 @@ function renderPlan(doc: Doc, data: ProposalData) {
   sectionOpen(doc, SECTION_LABELS[2], "What we'll ", 'do together', data.planLead)
 
   for (const phase of data.phases) {
-    ensure(doc, 90)
+    ensure(doc, 120)
+    if (phase.package) {
+      eyebrow(doc, phase.package.toUpperCase(), { size: 8, spacing: 1.5 })
+      doc.moveDown(0.3)
+    }
     subHeading(doc, phase.title)
     doc.moveDown(0.5)
     bodyPara(doc, phase.body)
+    if (phase.creates?.length) {
+      doc.moveDown(0.9)
+      ensure(doc, 50)
+      eyebrow(doc, "WHAT WE'LL CREATE", { size: 8, spacing: 2 })
+      doc.moveDown(0.5)
+      for (const c of phase.creates) createdItem(doc, c.title, c.detail)
+    }
     doc.moveDown(1.3)
   }
+  if (data.outcomes?.length) outcomesPanel(doc, data.outcomes)
   hairline(doc)
+}
+
+/** One deliverable in Section Three: diamond, bold title, then what it does for the client. */
+function createdItem(doc: Doc, title: string, detail: string) {
+  const x = MARGIN + 18
+  const w = CONTENT - 18
+  doc.font('Helvetica-Bold').fontSize(10.5)
+  const hTitle = doc.heightOfString(title, { width: w })
+  doc.font('Helvetica').fontSize(10)
+  const hDetail = detail ? doc.heightOfString(detail, { width: w, lineGap: 3 }) : 0
+  ensure(doc, hTitle + hDetail + 14)
+  const y = doc.y
+  diamond(doc, MARGIN + 3, y + 6)
+  doc.font('Helvetica-Bold').fontSize(10.5).fillColor(PALETTE.ink).text(title, x, y, { width: w })
+  if (detail) {
+    doc.font('Helvetica').fontSize(10).fillColor(PALETTE.muted).text(detail, x, y + hTitle + 3, { width: w, lineGap: 3 })
+  }
+  doc.x = MARGIN
+  doc.y = y + hTitle + (detail ? hDetail + 3 : 0) + 12
+}
+
+/** "What this gets you": the results, in a blush panel at the end of Section Three. */
+function outcomesPanel(doc: Doc, outcomes: string[]) {
+  const innerW = CONTENT - 68
+  doc.font('Helvetica').fontSize(9)
+  const hLabel = doc.heightOfString('WHAT THIS GETS YOU', { width: innerW, characterSpacing: 2 }) + 12
+  doc.font('Helvetica').fontSize(10.5)
+  const heights = outcomes.map(o => Math.max(doc.heightOfString(o, { width: innerW - 18, lineGap: 3 }), 12))
+  const hItems = heights.reduce((sum, h, i) => sum + h + (i < heights.length - 1 ? 8 : 0), 0)
+  tintedPanel(
+    doc,
+    PALETTE.panelBlush,
+    () => hLabel + hItems,
+    (x, w) => {
+      let y = doc.y
+      doc.font('Helvetica').fontSize(9).fillColor(PALETTE.accent)
+        .text('WHAT THIS GETS YOU', x, y, { width: w, characterSpacing: 2 })
+      y += hLabel
+      outcomes.forEach((o, i) => {
+        diamond(doc, x + 3, y + 6)
+        doc.font('Helvetica').fontSize(10.5).fillColor(PALETTE.ink)
+          .text(o, x + 18, y, { width: w - 18, lineGap: 3 })
+        y += heights[i] + 8
+      })
+    },
+  )
+  doc.x = MARGIN
+  doc.moveDown(1.2)
 }
 
 function renderInvestment(doc: Doc, data: ProposalData) {

@@ -51,12 +51,23 @@ export type ProposalData = {
   headlineAccent: string
   /** Section One intro, larger and muted. */
   opportunityLead: string
+  /** "What we heard": short points summarising what the client told us on the call. Older proposals don't have it. */
+  heard?: string[]
   /** Section One body — the recap of the discovery call, in ClubSheIs' words. */
   opportunityParagraphs: string[]
   /** Section Three intro. */
   planLead: string
   /** Section Three phases. One entry for a single-package engagement. */
-  phases: { title: string; body: string }[]
+  phases: {
+    title: string
+    /** Which offering in the investment section this phase is (older proposals don't have it). */
+    package?: string
+    body: string
+    /** What we'll create in this phase, each tied to something the client said. */
+    creates?: { title: string; detail: string }[]
+  }[]
+  /** "What this gets you": the results the client can expect. */
+  outcomes?: string[]
   /** Section Four intro. */
   investmentLead: string
   /** Section Four note under the intro, on commitment and billing shape. */
@@ -79,32 +90,56 @@ export const PROPOSAL_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: [
-    'headlineLead', 'headlineAccent', 'opportunityLead', 'opportunityParagraphs',
-    'planLead', 'phases', 'investmentLead', 'investmentNote', 'cards',
+    'headlineLead', 'headlineAccent', 'opportunityLead', 'heard', 'opportunityParagraphs',
+    'planLead', 'phases', 'outcomes', 'investmentLead', 'investmentNote', 'cards',
     'nextSteps', 'closingLines', 'closingParagraph',
   ],
   properties: {
     headlineLead: { type: 'string', description: 'Cover headline lead, e.g. "A strategy for launching". No brand name here.' },
     headlineAccent: { type: 'string', description: 'Cover headline accent — normally the brand name.' },
     opportunityLead: { type: 'string', description: 'One or two sentences framing the call recap.' },
+    heard: {
+      type: 'array',
+      description: 'What we heard: four to seven short points summarising what the client told us on the call, in plain words and close to how they said it. One idea per point, under 25 words each.',
+      items: { type: 'string' },
+    },
     opportunityParagraphs: {
       type: 'array',
       description: 'Three to five paragraphs recapping the discovery call in our own words. Never paste their notes back.',
       items: { type: 'string' },
     },
-    planLead: { type: 'string', description: 'One or two sentences summarising the shape of the engagement.' },
+    planLead: { type: 'string', description: 'The strategy in two or three sentences: the angle we will take for this client and why it fits what they told us.' },
     phases: {
       type: 'array',
       description: 'One entry for a single-package engagement, two for a phased build.',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'body'],
+        required: ['title', 'package', 'body', 'creates'],
         properties: {
-          title: { type: 'string', description: 'e.g. "Phase One · Foundation · Months 1 to 3", or "What we will build" when unphased.' },
-          body: { type: 'string', description: 'A full paragraph on what happens in this phase.' },
+          title: { type: 'string', description: 'e.g. "Phase One · Foundation · Months 1 to 3", or a name for the work when unphased, e.g. "Your sales page".' },
+          package: { type: 'string', description: 'The offering this phase is, exactly as named in the pricing, e.g. "Ghutte Page Build".' },
+          body: { type: 'string', description: 'The strategy for this phase: what we will do, in what order, and why, tied to what the client said. Four to six sentences.' },
+          creates: {
+            type: 'array',
+            description: 'Three to six concrete things we will create in this phase.',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['title', 'detail'],
+              properties: {
+                title: { type: 'string', description: 'The thing we will make, e.g. "A sales page for the Glow Reset programme".' },
+                detail: { type: 'string', description: 'One or two sentences: what it contains and the problem it solves for this client, referring to what they told us.' },
+              },
+            },
+          },
         },
       },
+    },
+    outcomes: {
+      type: 'array',
+      description: 'What this gets you: three to five concrete results the client can expect, tied to the goal they named. No guarantees of specific revenue.',
+      items: { type: 'string' },
     },
     investmentLead: { type: 'string' },
     investmentNote: { type: 'string', description: 'A sentence or two on commitment length and billing shape.' },
@@ -207,6 +242,10 @@ export function proposalToMarkdown(data: ProposalData, clientName: string, brand
 
   out.push('## The opportunity')
   if (data.opportunityLead) out.push(data.opportunityLead)
+  if (data.heard?.length) {
+    out.push('### What we heard')
+    for (const h of data.heard) out.push(`- ${h}`)
+  }
   out.push(...data.opportunityParagraphs)
 
   out.push('## Who we are')
@@ -220,7 +259,13 @@ export function proposalToMarkdown(data: ProposalData, clientName: string, brand
   if (data.planLead) out.push(data.planLead)
   for (const p of data.phases) {
     out.push(`### ${p.title}`)
+    if (p.package) out.push(`*${p.package}*`)
     out.push(p.body)
+    for (const c of p.creates ?? []) out.push(`- **${c.title}** — ${c.detail}`)
+  }
+  if (data.outcomes?.length) {
+    out.push('### What this gets you')
+    for (const o of data.outcomes) out.push(`- ${o}`)
   }
 
   out.push('## The investment')

@@ -178,7 +178,7 @@ export default function TaskDrawer({
 
 function ToolBox({ title, right, children }: { title: string; right?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <section className="shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 text-sm font-semibold">
         <Sparkles className="w-4 h-4" />
         {title}

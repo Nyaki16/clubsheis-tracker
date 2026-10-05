@@ -21,11 +21,11 @@ const fmt = (iso?: string | null) => {
 };
 
 // Read the generate route's progress stream until it reports done or error.
-async function runGenerate(taskId: string, notes: string, onProgress: (chars: number) => void) {
+async function runGenerate(taskId: string, notes: string, onProgress: (chars: number) => void, cards?: PricingCard[]) {
   const res = await fetch("/api/proposal/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ taskId, notes }),
+    body: JSON.stringify({ taskId, notes, cards }),
   });
   if (!res.ok || !res.body) {
     const j = await res.json().catch(() => ({}));
@@ -87,13 +87,15 @@ export default function ProposalTool({
     setEditing(ts.state !== "sent");
   }
 
-  async function generate() {
+  // `cards` set: a regenerate that keeps the team's edited pricing.
+  async function generate(withNotes = notes, cards?: PricingCard[]) {
+    setNotes(withNotes);
     setBusy(true);
     setError("");
     setChars(0);
     try {
-      await runGenerate(task.id, notes, setChars);
-      toast("Proposal ready to review");
+      await runGenerate(task.id, withNotes, setChars, cards);
+      toast(cards ? "Proposal rewritten with your pricing and notes" : "Proposal ready to review");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -125,7 +127,7 @@ export default function ProposalTool({
           </p>
         ) : (
           <div className="flex gap-2">
-            <button className={btnPrimary} disabled={!hasNotes} onClick={generate}>Generate proposal</button>
+            <button className={btnPrimary} disabled={!hasNotes} onClick={() => generate()}>Generate proposal</button>
           </div>
         )}
         {!hasNotes && <p className="text-xs text-slate-400">Add notes to the Discovery call task first.</p>}
@@ -181,7 +183,7 @@ function ProposalEditor({
   ts: ProposalState;
   editing: boolean;
   onEditAgain: () => void;
-  onRegenerate: () => void;
+  onRegenerate: (notes: string, cards: PricingCard[]) => void;
   onEditClient?: () => void;
   error: string;
 }) {
@@ -199,6 +201,8 @@ function ProposalEditor({
   const subject = `ClubSheIs Proposal for ${client.business_name || client.name}`;
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenNotes, setRegenNotes] = useState(ts.notes ?? "");
 
   const saveCards = (next: PricingCard[]) => {
     setCards(next);
@@ -325,13 +329,33 @@ function ProposalEditor({
         <button className={btnPrimary} disabled={sending || !to.trim()} onClick={send}>
           {sending ? "Sending…" : `${ts.sent_at ? "Resend" : "Send"} to ${first}`}
         </button>
-        <button className={btn} onClick={onRegenerate}>Regenerate</button>
+        <button className={btn} onClick={() => setRegenOpen((o) => !o)} aria-expanded={regenOpen}>Regenerate…</button>
         {body && body !== autoBody && (
           <button className={btn} onClick={() => { setBody(""); start(() => updateToolState(task.id, { email_body: null })); }}>
             Reset email
           </button>
         )}
       </div>
+      {regenOpen && (
+        <div className="flex flex-col gap-2 rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50/50 dark:bg-purple-500/5 p-3">
+          <label className={label} htmlFor="p-regen">What should change? (optional)</label>
+          <textarea
+            id="p-regen"
+            className={`${field} min-h-[80px]`}
+            placeholder="e.g. Lead with the page build; the Ghutte subscription starts once the page is live"
+            value={regenNotes}
+            onChange={(e) => setRegenNotes(e.target.value)}
+          />
+          <p className="text-xs text-slate-500">
+            Rewrites the whole proposal and email. It keeps the pricing above exactly as you&apos;ve set it, and reads these notes, this task&apos;s Notes,
+            the discovery transcript and any later meetings with {first}.
+          </p>
+          <div className="flex gap-2">
+            <button className={btnPrimary} onClick={() => onRegenerate(regenNotes, cards)}>Regenerate proposal</button>
+            <button className={btn} onClick={() => setRegenOpen(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
       {(sendError || error) && <p className="text-sm text-rose-600">{sendError || error}</p>}
     </div>
   );
