@@ -1,14 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
-import { Flag, RefreshCw } from "lucide-react";
+import { Flag } from "lucide-react";
 import type { Client, Profile } from "@/lib/types";
-import { resendGhutteLogin, retryGhutteSetup, setGhuttePaid, setProposalAccepted } from "@/app/actions/ghutte";
+import { setGhuttePaid, setProposalAccepted } from "@/app/actions/ghutte";
 import { useToast } from "./ui";
 
 const day = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
-const btn = "text-xs font-medium border border-slate-300 dark:border-slate-600 px-2 py-1 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 inline-flex items-center gap-1";
 
 function Row({
   done,
@@ -45,11 +44,11 @@ export default function Milestones({ client, profiles }: { client: Client; profi
   const pay = (client.ghutte_payment ?? {}) as Record<string, string | null>;
   const both = !!client.proposal_accepted_at && !!client.ghutte_paid_at;
 
-  const run = (fn: () => Promise<{ note: string } | void>, ok?: string) =>
+  const run = (fn: () => Promise<{ note: string }>) =>
     start(async () => {
       try {
         const r = await fn();
-        toast((r && r.note) || ok || "Done");
+        toast(r.note || "Done");
       } catch (e) {
         toast(e instanceof Error ? e.message : "Something went wrong.");
       }
@@ -82,43 +81,15 @@ export default function Milestones({ client, profiles }: { client: Client; profi
             : "Ticks itself when GHL reports the payment. Paid another way? Tick it here."
         }
       />
-      {(both || client.ghutte_error || client.ghutte_location_id) && (
-        <div className="px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-slate-800 text-xs flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span className="font-semibold text-slate-600 dark:text-slate-300">Ghutte:</span>
-          <span className={client.ghutte_location_id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
-            {client.ghutte_location_id ? "✓ sub-account linked" : both ? "○ sub-account: Mpume creates it (her Onboarding task)" : "○ sub-account"}
-          </span>
-          <span className={client.ghutte_user_id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
-            {client.ghutte_user_id ? "✓ added as a user" : "○ user"}
-          </span>
-          <span className={client.ghutte_login_sent_at ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
-            {client.ghutte_login_sent_at ? `✓ login emailed ${day(client.ghutte_login_sent_at)}` : "○ login email"}
-          </span>
-          {client.ghutte_location_id && (
-            <a className="underline text-slate-600 dark:text-slate-300" href={`https://app.gohighlevel.com/location/${client.ghutte_location_id}/dashboard`} target="_blank" rel="noopener noreferrer">
-              Open in Ghutte
-            </a>
+      {(both || client.ghutte_error) && (
+        <div className="px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-slate-800 text-xs flex flex-col gap-1">
+          {both && (
+            <p className="text-slate-600 dark:text-slate-300">
+              <span className="font-semibold">Ghutte:</span> Mpume has the “Create Ghutte sub-account” task in Onboarding: she creates the sub-account, adds{" "}
+              {client.name.split(" ")[0]} as a user and sends their login.
+            </p>
           )}
-          <span className="ml-auto flex gap-2">
-            {both && client.ghutte_location_id && !client.ghutte_user_id && (
-              <button className={btn} disabled={pending} onClick={() => run(() => retryGhutteSetup(client.id))}>
-                <RefreshCw className="w-3 h-3" /> Try again
-              </button>
-            )}
-            {client.ghutte_user_id && (
-              <button
-                className={btn}
-                disabled={pending}
-                onClick={() => {
-                  if (!window.confirm(`Set a new temporary password for ${client.name} and email it?`)) return;
-                  run(() => resendGhutteLogin(client.id), "New login emailed");
-                }}
-              >
-                Resend login
-              </button>
-            )}
-          </span>
-          {client.ghutte_error && <p className="basis-full text-rose-600">{client.ghutte_error}</p>}
+          {client.ghutte_error && <p className="text-rose-600">{client.ghutte_error}</p>}
         </div>
       )}
     </div>

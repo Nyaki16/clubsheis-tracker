@@ -30,13 +30,12 @@ export default function GhutteSetup({
 }: {
   settings: GhutteSettings;
   webhookUrl: string;
-  env: { clubsheisKey: boolean; agencyKey: boolean; gmail: boolean };
+  env: { clubsheisKey: boolean };
   unmatched: Record<string, string | null>[];
 }) {
   const toast = useToast();
   const [pending, start] = useTransition();
   const [tag, setTag] = useState(settings.tag);
-  const [loginUrl, setLoginUrl] = useState(settings.loginUrl);
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
@@ -44,9 +43,8 @@ export default function GhutteSetup({
         <h1 className="text-2xl font-bold">Ghutte</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           The two Sales milestones on every client. <b>Proposal Accepted</b> tags the client in ClubSheIs&apos;s GHL so your workflow runs.{" "}
-          <b>Ghutte Payment Made</b> ticks itself when GHL reports the payment. Once both are ticked, Mpume gets the “Create Ghutte sub-account” task with
-          the client&apos;s details. She creates it in Ghutte and links it in the task, and the Tracker adds the client as a user and emails their login from
-          Gizelle.
+          <b>Ghutte Payment Made</b> ticks itself when GHL reports the payment. Once both are ticked, Mpume gets the “Create Ghutte sub-account” task for
+          today, with the client&apos;s details to copy. She sets up the sub-account, the user and the login in Ghutte.
         </p>
       </header>
 
@@ -54,8 +52,6 @@ export default function GhutteSetup({
         <h2 className="font-semibold">Connections</h2>
         <ul className="flex flex-col gap-2">
           <Status ok={env.clubsheisKey} label="ClubSheIs GHL key (for the tag)" fix="Add GHL_PIT_KEY_CLUBSHEIS on Vercel (the same key the old Client Flow app uses), then redeploy." />
-          <Status ok={env.agencyKey} label="Agency key (listing sub-accounts, adding users)" fix="Add GHL_AGENCY_KEY on Vercel. In GHL's Private Integrations it needs Sub-accounts (view) and Users (view and edit)." />
-          <Status ok={env.gmail} label="Gmail (the login email)" fix="Add GMAIL_USER and GMAIL_APP_PASSWORD on Vercel." />
         </ul>
       </section>
 
@@ -66,18 +62,13 @@ export default function GhutteSetup({
           <input className={field} value={tag} onChange={(e) => setTag(e.target.value)} />
           <span className="text-xs text-slate-500">Your GHL workflow should start on “Contact Tag added” with this tag.</span>
         </label>
-        <label className="text-sm flex flex-col gap-1">
-          <span className="font-medium">Ghutte login link</span>
-          <input className={field} value={loginUrl} onChange={(e) => setLoginUrl(e.target.value)} placeholder="e.g. https://app.ghutte.com" />
-          <span className="text-xs text-slate-500">Goes in the login email the client receives. Use the address clients log in at.</span>
-        </label>
         <button
           className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
           disabled={pending}
           onClick={() =>
             start(async () => {
               try {
-                await saveGhutteSettings({ tag, loginUrl });
+                await saveGhutteSettings({ tag });
                 toast("Ghutte settings saved");
               } catch (e) {
                 toast(e instanceof Error ? e.message : "Couldn't save.");

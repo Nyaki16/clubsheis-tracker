@@ -13,11 +13,7 @@ export default async function GhutteSettingsPage() {
     <GhutteSetup
       settings={settings}
       webhookUrl={settings.webhookSecret ? `${PUBLIC_APP_URL}/api/ghl/payment?key=${settings.webhookSecret}` : ""}
-      env={{
-        clubsheisKey: !!process.env.GHL_PIT_KEY_CLUBSHEIS,
-        agencyKey: !!process.env.GHL_AGENCY_KEY,
-        gmail: !!process.env.GMAIL_USER && !!process.env.GMAIL_APP_PASSWORD,
-      }}
+      env={{ clubsheisKey: !!process.env.GHL_PIT_KEY_CLUBSHEIS }}
       unmatched={(((unmatched?.value ?? {}) as { items?: Record<string, string | null>[] }).items ?? []).slice(0, 10)}
     />
   );

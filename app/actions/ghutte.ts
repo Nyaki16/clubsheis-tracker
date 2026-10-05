@@ -3,7 +3,7 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ghutteSettings, linkSubAccount, listSubAccounts, resendLogin, runGhutteSetup, tagProposalAccepted } from "@/lib/ghutte";
+import { ghutteSettings, runGhutteSetup, tagProposalAccepted } from "@/lib/ghutte";
 import type { Client } from "@/lib/types";
 
 async function me() {
@@ -48,7 +48,7 @@ export async function setProposalAccepted(clientId: string, accepted: boolean) {
     note = `Proposal accepted, but GHL wasn't updated: ${e instanceof Error ? e.message : "unknown error"}`;
     await supabase.from("clients").update({ ghutte_error: note }).eq("id", clientId);
   }
-  if ((data as Client).ghutte_paid_at) note += ` ${await runGhutteSetup(supabase, clientId)}`;
+  if ((data as Client).ghutte_paid_at) note = `${note} ${await runGhutteSetup(supabase, clientId)}`.trim();
   done(clientId);
   return { note };
 }
@@ -69,27 +69,14 @@ export async function setGhuttePaid(clientId: string, paid: boolean) {
   return { note };
 }
 
-export async function retryGhutteSetup(clientId: string) {
-  const { supabase } = await me();
-  const note = await runGhutteSetup(supabase, clientId);
-  done(clientId);
-  return { note };
-}
-
-export async function resendGhutteLogin(clientId: string) {
-  const { supabase } = await me();
-  await resendLogin(supabase, clientId);
-  done(clientId);
-}
-
-export async function saveGhutteSettings(input: { tag: string; loginUrl: string }) {
+export async function saveGhutteSettings(input: { tag: string }) {
   const { supabase } = await me();
   const current = await ghutteSettings(supabase);
   const tag = input.tag.trim();
   if (!tag) throw new Error("The tag can't be empty.");
   const { error } = await supabase
     .from("app_settings")
-    .upsert({ key: "ghutte", value: { ...current, tag, loginUrl: input.loginUrl.trim() }, updated_at: new Date().toISOString() });
+    .upsert({ key: "ghutte", value: { ...current, tag }, updated_at: new Date().toISOString() });
   if (error) throw new Error(error.message);
   revalidatePath("/settings/ghutte");
 }
@@ -105,18 +92,3 @@ export async function newGhutteWebhookSecret() {
   revalidatePath("/settings/ghutte");
 }
 
-/** For Mpume's task: the agency's sub-accounts, newest first, and where to create one. */
-export async function listGhutteSubAccounts() {
-  const { supabase } = await me();
-  const [subs, settings] = await Promise.all([listSubAccounts(), ghutteSettings(supabase)]);
-  return { subs, loginUrl: settings.loginUrl };
-}
-
-/** Mpume created the sub-account in GHL: link it, then add the client as a user and email the login. */
-export async function linkGhutteSubAccount(clientId: string, locationId: string) {
-  const { supabase } = await me();
-  if (!locationId.trim()) throw new Error("Pick the sub-account first.");
-  const note = await linkSubAccount(supabase, clientId, locationId);
-  done(clientId);
-  return { note };
-}

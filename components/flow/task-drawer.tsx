@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Sparkles, Trash2, X } from "lucide-react";
 import type { TaskStatusId } from "@/lib/constants";
 import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, type PricingTier } from "@/lib/flow";
@@ -16,8 +15,6 @@ import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
 import { CLIENT_SENDER } from "@/lib/sender";
 import { getBrief } from "@/app/actions/briefs";
 import { queueDocsForTask } from "@/app/actions/client-intel";
-import { linkGhutteSubAccount, listGhutteSubAccounts } from "@/app/actions/ghutte";
-import type { SubAccount } from "@/lib/ghutte";
 import Markdown from "./markdown";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
@@ -367,7 +364,7 @@ function ToolPanel({
     case "account":
       return (
         <ToolBox title="Ghutte setup">
-          <GhutteAccount task={task} client={client} clientTasks={clientTasks} />
+          <GhutteAccount client={client} clientTasks={clientTasks} />
         </ToolBox>
       );
 
@@ -601,63 +598,14 @@ function CopyRow({ label: name, value }: { label: string; value: string }) {
   );
 }
 
-// Mpume creates the sub-account in GHL (the API won't let us), then links it
-// here; the Tracker adds the client as a user and emails their login.
-function GhutteAccount({ task, client, clientTasks }: { task: Task; client: Client; clientTasks: Task[] }) {
-  const router = useRouter();
-  const toast = useToast();
-  const [pending, start] = useTransition();
-  const [subs, setSubs] = useState<SubAccount[] | null>(null);
-  const [loginUrl, setLoginUrl] = useState("");
-  const [picked, setPicked] = useState("");
-  const [err, setErr] = useState("");
-  const ts = task.tool_state ?? {};
-  const linked = String(ts.location_id ?? client.ghutte_location_id ?? "");
-
+// Done by hand in Ghutte: the client's details to copy, and what to do.
+function GhutteAccount({ client, clientTasks }: { client: Client; clientTasks: Task[] }) {
   const ys = (clientTasks.find((t) => t.tool === "yellow")?.tool_state ?? {}) as Record<string, string>;
   const v = (k: string) => (typeof ys[k] === "string" ? ys[k].trim() : "");
-  const businessName = v("business_name") || client.business_name || client.name;
-
-  useEffect(() => {
-    if (linked) return;
-    let alive = true;
-    listGhutteSubAccounts()
-      .then((r) => {
-        if (!alive) return;
-        setSubs(r.subs);
-        setLoginUrl(r.loginUrl);
-        // Pre-pick a sub-account that looks like this client's, if Mpume already made it.
-        const want = businessName.toLowerCase();
-        const match = r.subs.find((s) => s.name.toLowerCase() === want) ?? r.subs.find((s) => s.email && s.email.toLowerCase() === (client.email ?? "").toLowerCase());
-        if (match) setPicked(match.id);
-      })
-      .catch((e) => alive && setErr(e instanceof Error ? e.message : "Couldn't load the sub-accounts."));
-    return () => {
-      alive = false;
-    };
-  }, [linked, businessName, client.email]);
-
-  if (linked) {
-    return (
-      <div className="flex flex-col gap-1.5 text-sm">
-        <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-          ✓ Sub-account “{String(ts.name ?? businessName)}” linked ·{" "}
-          <a className="underline" href={`https://app.gohighlevel.com/location/${linked}/dashboard`} target="_blank" rel="noopener noreferrer">Open in Ghutte</a>
-        </p>
-        <p className="text-xs text-slate-500">
-          {client.ghutte_login_sent_at
-            ? `${client.name.split(" ")[0]} was added as a user and their login was emailed.`
-            : client.ghutte_error
-            ? client.ghutte_error
-            : "The client is added as a user and emailed their login once Proposal Accepted and Ghutte Payment Made are both ticked."}
-        </p>
-      </div>
-    );
-  }
-
+  const first = client.name.split(" ")[0];
   const details: [string, string][] = (
     [
-      ["Business name", businessName],
+      ["Business name", v("business_name") || client.business_name || client.name],
       ["Client", [v("first_name"), v("last_name")].filter(Boolean).join(" ") || client.name],
       ["Email", v("email") || client.email || ""],
       ["Phone", v("phone") || client.phone || ""],
@@ -672,60 +620,22 @@ function GhutteAccount({ task, client, clientTasks }: { task: Task; client: Clie
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <p className="text-sm font-semibold">1. Create the sub-account in Ghutte</p>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Switch to Agency View, create a sub-account with these details and apply the ClubSheIs snapshot.
-          {!v("address") && " The Yellow Sheet isn't in yet, so there's no address: use Johannesburg, Gauteng, 2000 for now."}
-        </p>
-        <div className="mt-2 flex flex-col gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
-          {details.map(([k, val]) => (
-            <CopyRow key={k} label={k} value={val} />
-          ))}
-        </div>
-        <a href={loginUrl || "https://system.ghutte.com"} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">
-          Open Ghutte
-        </a>
+      <ol className="list-decimal pl-5 text-sm flex flex-col gap-1 text-slate-700 dark:text-slate-300">
+        <li>In Ghutte, switch to Agency View and create a sub-account with the details below. Apply the ClubSheIs snapshot.</li>
+        <li>Add {first} as a user on it, with the email below.</li>
+        <li>Send {first} their login, then mark this task Closed Out.</li>
+      </ol>
+      {!v("address") && (
+        <p className="text-xs text-slate-500">The Yellow Sheet isn&apos;t in yet, so there&apos;s no address: use Johannesburg, Gauteng, 2000 for now.</p>
+      )}
+      <div className="flex flex-col gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
+        {details.map(([k, val]) => (
+          <CopyRow key={k} label={k} value={val} />
+        ))}
       </div>
-
-      <div>
-        <p className="text-sm font-semibold">2. Link it here</p>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Pick the sub-account you just made. The Tracker then adds {client.name.split(" ")[0]} as a user and emails their login from Gizelle (once both
-          Sales milestones are ticked).
-        </p>
-        <div className="mt-2 flex gap-2">
-          <select className={field} value={picked} onChange={(e) => setPicked(e.target.value)} aria-label="Sub-account" disabled={!subs}>
-            <option value="">{subs ? "Pick the sub-account…" : "Loading sub-accounts…"}</option>
-            {(subs ?? []).map((sub) => (
-              <option key={sub.id} value={sub.id}>
-                {sub.name}
-                {sub.email ? ` · ${sub.email}` : ""}
-                {sub.dateAdded ? ` · ${new Date(sub.dateAdded).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}
-              </option>
-            ))}
-          </select>
-          <button
-            disabled={pending || !picked}
-            onClick={() =>
-              start(async () => {
-                setErr("");
-                try {
-                  const r = await linkGhutteSubAccount(client.id, picked);
-                  toast(r.note);
-                  router.refresh();
-                } catch (e) {
-                  setErr(e instanceof Error ? e.message : "Couldn't link it.");
-                }
-              })
-            }
-            className="shrink-0 text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
-          >
-            {pending ? "Linking…" : "Link"}
-          </button>
-        </div>
-      </div>
-      {err && <p className="text-sm text-rose-600">{err}</p>}
+      <a href="https://system.ghutte.com" target="_blank" rel="noopener noreferrer" className="self-start text-xs underline">
+        Open Ghutte
+      </a>
     </div>
   );
 }

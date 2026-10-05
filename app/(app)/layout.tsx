@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/nav";
 import { ToastProvider } from "@/components/flow/ui";
-import DebbieLauncher from "@/components/debbie/debbie-launcher";
 import { PackagesProvider } from "@/components/flow/packages-context";
 import { loadPackages } from "@/lib/packages";
 
@@ -31,7 +30,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <ToastProvider>
           <PackagesProvider packages={packages}>
             <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
-            <DebbieLauncher />
           </PackagesProvider>
         </ToastProvider>
       </div>
