@@ -344,3 +344,41 @@ export async function deletePricingTier(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/settings/pricing");
 }
+
+// ── Past leads ──────────────────────────────────────────────────────────────
+
+// Bring an archived discovery call back into Sales, with what we already know
+// from the booking and the Gemini notes in the Discovery task.
+export async function revivePastLead(clientId: string) {
+  const supabase = await createClient();
+  const { data: client, error } = await supabase.from("clients").select("*").eq("id", clientId).single();
+  if (error) throw new Error(error.message);
+
+  let leadId = client.lead_id as string | null;
+  if (!leadId) {
+    const { data: profiles } = await supabase.from("profiles").select("id, email, name");
+    leadId = (profiles ?? []).find((p) => /^gizelle@/i.test(p.email) || /^gizelle/i.test(p.name))?.id ?? null;
+  }
+  await supabase.from("clients").update({ is_past_lead: false, package: client.package ?? "lead", lead_id: leadId }).eq("id", clientId);
+
+  const { data: job } = await supabase.from("jobs").select("id").eq("client_id", clientId).eq("kind", "flow").maybeSingle();
+  if (!job) await issueFlow(clientId, (client.package ?? "lead") as PackageId, leadId);
+
+  const jobId = await getOrCreateFlowJob(supabase, clientId);
+  const { data: disc } = await supabase.from("tasks").select("id, tool_state").eq("job_id", jobId).eq("tool", "discovery").maybeSingle();
+  if (disc) {
+    const ts = (disc.tool_state ?? {}) as Record<string, unknown>;
+    await supabase
+      .from("tasks")
+      .update({
+        tool_state: {
+          ...ts,
+          need: ts.need || client.call_message || "",
+          transcript: ts.transcript || client.call_notes || "",
+          link: ts.link || client.call_notes_url || "",
+        },
+      })
+      .eq("id", disc.id);
+  }
+  revalidateFlow(clientId);
+}

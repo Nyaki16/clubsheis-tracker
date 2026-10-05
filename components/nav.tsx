@@ -52,6 +52,7 @@ const GROUPS = [
     items: [
       { href: "/settings/templates", label: "Package templates", icon: Layers },
       { href: "/settings/pricing", label: "Pricing", icon: Tag },
+      { href: "/settings/calendar", label: "Calendar sync", icon: CalendarDays },
     ],
   },
 ];

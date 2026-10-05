@@ -6,13 +6,14 @@ type SB = Awaited<ReturnType<typeof createClient>>;
 
 // Everything the flow screens need in one round of queries.
 export async function loadFlowData(supabase: SB) {
-  const [clientsRes, jobsRes, profilesRes, templatesRes, userRes, tiersRes] = await Promise.all([
+  const [clientsRes, jobsRes, profilesRes, templatesRes, userRes, tiersRes, syncRes] = await Promise.all([
     supabase.from("clients").select("*").order("created_at", { ascending: false }),
     supabase.from("jobs").select("*").eq("kind", "flow"),
     supabase.from("profiles").select("*").order("name"),
     supabase.from("flow_templates").select("*").order("position"),
     supabase.auth.getUser(),
     supabase.from("pricing_tiers").select("*").order("position"),
+    supabase.from("app_settings").select("value").eq("key", "calendar_sync").maybeSingle(),
   ]);
   const flowJobs = (jobsRes.data ?? []) as Job[];
   const jobIds = flowJobs.map((j) => j.id);
@@ -34,6 +35,7 @@ export async function loadFlowData(supabase: SB) {
     profiles: (profilesRes.data ?? []) as Profile[],
     templates: (templatesRes.data ?? []) as FlowTemplate[],
     tiers: (tiersRes.data ?? []) as PricingTier[],
+    calendarSync: (syncRes.data?.value as Record<string, unknown> | undefined) ?? null,
     tasksByClient: Object.fromEntries(tasksByClient) as Record<string, Task[]>,
     meId: userRes.data.user?.id ?? null,
     migrated: !templatesRes.error,

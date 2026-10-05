@@ -83,6 +83,8 @@ export type Client = {
   call_event_id: string | null;
   call_notes_url: string | null;
   call_message: string | null;
+  call_notes: string | null;
+  call_cancelled: boolean;
   clock_started_on: string | null;
   created_at: string;
 };

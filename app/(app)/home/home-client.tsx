@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTaskStatus } from "@/app/actions/tasks";
@@ -22,11 +22,13 @@ export default function HomeClient({
   tasksByClient,
   meId,
   migrated,
+  calendarSync,
 }: {
   clients: Client[];
   profiles: Profile[];
   templates: FlowTemplate[];
   tiers: PricingTier[];
+  calendarSync: Record<string, unknown> | null;
   tasksByClient: Record<string, Task[]>;
   meId: string | null;
   migrated: boolean;
@@ -141,6 +143,8 @@ export default function HomeClient({
           </button>
         </div>
       </header>
+
+      <CalendarBar sync={calendarSync} upcoming={clients.filter((c) => !c.is_past_lead && !c.call_cancelled && c.call_at && new Date(c.call_at) > today).length} />
 
       <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden" aria-label="My tasks">
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-200 dark:border-slate-800">
@@ -264,5 +268,30 @@ function ClientCard({ client, tasks, owner }: { client: Client; tasks: Task[]; o
         )}
       </div>
     </Link>
+  );
+}
+
+function CalendarBar({ sync, upcoming }: { sync: Record<string, unknown> | null; upcoming: number }) {
+  const at = typeof sync?.at === "string" ? new Date(sync.at) : null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5">
+      <CalendarDays className="w-4 h-4 text-purple-600 shrink-0" />
+      {at ? (
+        <>
+          <span className="font-semibold">Calendar connected</span>
+          <span className="text-slate-500">
+            · info@clubsheis.com · {upcoming} upcoming discovery call{upcoming === 1 ? "" : "s"}
+          </span>
+          <span className="ml-auto text-xs text-slate-400">
+            Synced {at.toLocaleString("en-ZA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="text-slate-600 dark:text-slate-300">Discovery calls aren&apos;t syncing from the calendar yet.</span>
+          <Link href="/settings/calendar" className="ml-auto text-xs font-semibold underline">Set it up</Link>
+        </>
+      )}
+    </div>
   );
 }

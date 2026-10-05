@@ -38,7 +38,9 @@ export async function updateSession(request: NextRequest) {
     // Open-tracking pixel in proposal emails, and the Yellow Sheet clients fill in.
     pathname.startsWith("/api/track/") ||
     pathname.startsWith("/yellow-sheet/") ||
-    pathname.startsWith("/api/yellow-sheet/");
+    pathname.startsWith("/api/yellow-sheet/") ||
+    // Calendar sync from the Apps Script (checks its own shared secret).
+    pathname === "/api/calendar/ingest";
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

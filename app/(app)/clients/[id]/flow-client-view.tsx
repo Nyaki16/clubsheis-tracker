@@ -98,6 +98,9 @@ export default function FlowClientView({
               <span>
                 {callUpcoming ? "Discovery call booked" : "Discovery call"}: <b className="font-semibold">{client.call_title}</b> · {fmtCall(client.call_at)}
               </span>
+              {client.call_cancelled && (
+                <span className="font-semibold px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">Cancelled</span>
+              )}
               {!callUpcoming && client.call_notes_url && (
                 <a href={client.call_notes_url} target="_blank" rel="noopener noreferrer" className="underline">Notes by Gemini</a>
               )}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { PACKAGES, PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
-import { startFlow } from "@/app/actions/flow";
+import { revivePastLead, startFlow } from "@/app/actions/flow";
 import Avatar from "@/components/avatar";
 import { PhaseDot, ProgressBar, dueInfo, useToast } from "@/components/flow/ui";
 import { NewClientModal } from "@/components/flow/client-modals";
@@ -83,7 +83,7 @@ export default function FlowClientsList({
 
       {tab === "past" && (
         <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/60 rounded-lg px-4 py-2.5">
-          Discovery calls from before 1 September that never became clients. They arrive here once the calendar is connected, and stay searchable.
+          Discovery calls from before 1 September that never became clients. They stay searchable here, and if someone comes back, Move to Sales brings their call history with them.
         </p>
       )}
 
@@ -110,6 +110,18 @@ export default function FlowClientsList({
         )}
       </div>
 
+      {tab === "past" ? (
+        <PastLeadsTable
+          list={[...list].sort((a, b) => (b.call_at ?? "").localeCompare(a.call_at ?? ""))}
+          onRevive={(c) =>
+            start(async () => {
+              await revivePastLead(c.id);
+              toast(`${c.name} moved to Sales with their call attached`);
+              router.push(`/clients/${c.id}`);
+            })
+          }
+        />
+      ) : (
       <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
@@ -202,13 +214,14 @@ export default function FlowClientsList({
             {!list.length && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-sm text-slate-400">
-                  {tab === "past" ? "No past leads yet." : "No clients match."}
+                  No clients match.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </section>
+      )}
 
       {newOpen && (
         <NewClientModal
@@ -219,5 +232,55 @@ export default function FlowClientsList({
         />
       )}
     </div>
+  );
+}
+
+function PastLeadsTable({ list, onRevive }: { list: Client[]; onRevive: (c: Client) => void }) {
+  return (
+    <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+      <table className="w-full min-w-[820px] text-sm">
+        <thead>
+          <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <th className="px-4 py-2.5 font-semibold">Lead</th>
+            <th className="px-4 py-2.5 font-semibold">Discovery call</th>
+            <th className="px-4 py-2.5 font-semibold">What they said when booking</th>
+            <th className="px-4 py-2.5 font-semibold">Notes</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((c) => (
+            <tr key={c.id} className="border-b last:border-0 border-slate-100 dark:border-slate-800 align-top">
+              <td className="px-4 py-3">
+                <p className="font-semibold">{c.name}</p>
+                <p className="text-xs text-slate-400">{[c.email, c.phone].filter(Boolean).join(" · ")}</p>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                {c.call_at ? new Date(c.call_at).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                <p className="text-xs text-slate-400 max-w-[220px] truncate">{c.call_title}</p>
+              </td>
+              <td className="px-4 py-3 max-w-[300px] text-xs text-slate-600 dark:text-slate-300">{c.call_message || "—"}</td>
+              <td className="px-4 py-3">
+                {c.call_notes_url ? (
+                  <a href={c.call_notes_url} target="_blank" rel="noopener noreferrer" className="text-xs underline whitespace-nowrap">Notes by Gemini</a>
+                ) : (
+                  <span className="text-xs text-slate-400">None</span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <button onClick={() => onRevive(c)} className="text-xs font-medium border border-slate-300 dark:border-slate-600 px-2.5 py-1 rounded-md whitespace-nowrap hover:bg-slate-50 dark:hover:bg-slate-800">
+                  Move to Sales
+                </button>
+              </td>
+            </tr>
+          ))}
+          {!list.length && (
+            <tr>
+              <td colSpan={5} className="px-4 py-6 text-sm text-slate-400">No past leads yet. They arrive here when the calendar sync runs its backfill.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </section>
   );
 }
