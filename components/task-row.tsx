@@ -18,6 +18,7 @@ import Avatar from "@/components/avatar";
 import { TASK_STATUSES, type TaskStatusId } from "@/lib/constants";
 import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate, isOverdue } from "@/lib/utils";
+import { DebbieBadge } from "@/components/flow/ui";
 import {
   deleteTask,
   toggleTaskPriority,
@@ -606,6 +607,7 @@ export function TaskGridRow({
               {task.title}
             </button>
           )}
+          {task.debbie_recommended && <DebbieBadge source={task.debbie_source} />}
         </div>
         {job && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 px-1.5">{job.name}</p>}
       </div>

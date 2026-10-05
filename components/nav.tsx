@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
+  BookOpen,
   CalendarDays,
   CopyMinus,
   Download,
@@ -16,6 +17,7 @@ import {
   Monitor,
   Moon,
   ScrollText,
+  Sparkles,
   SquareKanban,
   Star,
   Sun,
@@ -34,6 +36,8 @@ const GROUPS = [
     items: [
       { href: "/home", label: "Home", icon: House },
       { href: "/clients", label: "Clients", icon: Users },
+      { href: "/debbie", label: "Ask Debbie", icon: Sparkles },
+      { href: "/meetings", label: "Meetings", icon: BookOpen },
     ],
   },
   {

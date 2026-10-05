@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchClientFlowDocs } from "@/lib/client-flow";
-import type { Client, ClientDate, Job, Profile, Task } from "@/lib/types";
+import type { Client, ClientDate, ClientDocument, Job, Meeting, Profile, Task } from "@/lib/types";
+import ClientIntel from "@/components/flow/client-intel";
 import type { FlowTemplate, PricingTier } from "@/lib/flow";
 import ClientDetail from "./client-detail";
 import FlowClientView from "./flow-client-view";
@@ -22,7 +23,7 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [jobsRes, profilesRes, datesRes, templatesRes, tiersRes, clientFlowDocs] = await Promise.all([
+  const [jobsRes, profilesRes, datesRes, templatesRes, tiersRes, clientFlowDocs, meetingsRes, docsRes] = await Promise.all([
     supabase
       .from("jobs")
       .select("*")
@@ -37,7 +38,12 @@ export default async function ClientDetailPage({
     supabase.from("flow_templates").select("*").order("position"),
     supabase.from("pricing_tiers").select("*").order("position"),
     fetchClientFlowDocs(client.name),
+    supabase.from("meeting_clients").select("meetings(*)").eq("client_id", id),
+    supabase.from("client_documents").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(30),
   ]);
+  const meetings = ((meetingsRes.data ?? []) as unknown as { meetings: Meeting | null }[])
+    .map((r) => r.meetings)
+    .filter((m): m is Meeting => !!m);
 
   const allJobs: Job[] = jobsRes.data ?? [];
   const jobIds = allJobs.map((j) => j.id);
@@ -64,7 +70,8 @@ export default async function ClientDetailPage({
         migrated={!templatesRes.error}
       />
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Profile, key dates &amp; other jobs</h2>
+        <h2 className="text-lg font-semibold">Profile, meetings &amp; other jobs</h2>
+        <ClientIntel client={client as Client} meetings={meetings} docs={(docsRes.data ?? []) as ClientDocument[]} profiles={profiles} />
         <ClientDetail
           client={client as Client}
           jobs={otherJobs}

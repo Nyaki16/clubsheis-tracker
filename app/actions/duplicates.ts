@@ -86,6 +86,16 @@ export async function mergeClients(keepId: string, dropId: string) {
   const { error: jobErr } = await supabase.from("jobs").update({ client_id: keepId }).eq("client_id", dropId);
   if (jobErr) throw new Error(jobErr.message);
   await supabase.from("client_dates").update({ client_id: keepId }).eq("client_id", dropId);
+  // Debbie's meeting links and the client documents come across too.
+  const { data: links } = await supabase.from("meeting_clients").select("meeting_id").eq("client_id", dropId);
+  if (links?.length) {
+    await supabase
+      .from("meeting_clients")
+      .upsert(links.map((l) => ({ meeting_id: l.meeting_id, client_id: keepId })), { onConflict: "meeting_id,client_id", ignoreDuplicates: true });
+  }
+  await supabase.from("client_documents").update({ client_id: keepId }).eq("client_id", dropId);
+  if (d.profile_gdoc_id && !k.profile_gdoc_id) patch.profile_gdoc_id = d.profile_gdoc_id;
+  if (d.strategy_gdoc_id && !k.strategy_gdoc_id) patch.strategy_gdoc_id = d.strategy_gdoc_id;
 
   if (Object.keys(patch).length) {
     const { error } = await supabase.from("clients").update(patch).eq("id", keepId);

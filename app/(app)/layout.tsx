@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/nav";
 import { ToastProvider } from "@/components/flow/ui";
+import DebbieLauncher from "@/components/debbie/debbie-launcher";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -28,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="lg:pl-60">
         <ToastProvider>
           <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
+          <DebbieLauncher />
         </ToastProvider>
       </div>
     </>

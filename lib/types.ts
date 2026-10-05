@@ -85,6 +85,9 @@ export type Client = {
   call_message: string | null;
   call_notes: string | null;
   call_cancelled: boolean;
+  docs_dirty_at: string | null;
+  profile_gdoc_id: string | null;
+  strategy_gdoc_id: string | null;
   clock_started_on: string | null;
   created_at: string;
 };
@@ -147,6 +150,8 @@ export type Task = {
   approved: boolean;
   originator_id: string | null;
   leave_request_id: string | null;
+  debbie_recommended?: boolean;
+  debbie_source?: { meeting_id: string; meeting_title: string; date: string | null; quote: string } | null;
   // Client flow
   phase: "sales" | "onboarding" | "yellow" | "production" | "delivery" | null;
   tool: string | null;
@@ -258,4 +263,34 @@ export type Deliverable = {
     | "approved";
   created_at: string;
   updated_at: string;
+};
+
+export type MeetingKind = "team_scroll" | "boardroom" | "client" | "discovery" | "one_on_one" | "internal" | "other";
+
+export type Meeting = {
+  id: string;
+  event_id: string | null;
+  title: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  kind: MeetingKind;
+  attendees: { email: string; name?: string }[];
+  notes: string;
+  notes_url: string | null;
+  source: "calendar" | "manual";
+  created_by: string | null;
+  debbie_processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClientDocument = {
+  id: string;
+  client_id: string;
+  kind: "profile" | "strategy";
+  content: string;
+  sources: string;
+  created_by: string | null;
+  gdoc_written: boolean;
+  created_at: string;
 };

@@ -6,8 +6,9 @@ export type IncomingEvent = {
   status?: string; // "confirmed" | "tentative" | "cancelled"
   summary?: string;
   start?: string; // ISO date-time
+  end?: string;
   description?: string;
-  attendees?: { email: string; displayName?: string; organizer?: boolean; self?: boolean }[];
+  attendees?: { email: string; displayName?: string; organizer?: boolean; self?: boolean; resource?: boolean }[];
   notesUrl?: string; // "Notes by Gemini" doc attached to the event
   notesText?: string;
 };
@@ -81,4 +82,24 @@ export function bookingFrom(e: IncomingEvent): Booking | null {
     notesUrl: e.notesUrl || null,
     notesText: e.notesText?.slice(0, 60000) || null,
   };
+}
+
+export type MeetingKindId = "team_scroll" | "boardroom" | "client" | "discovery" | "one_on_one" | "internal" | "other";
+
+// What sort of meeting this is, from its title and guest list.
+export function meetingKind(e: IncomingEvent): MeetingKindId {
+  const title = e.summary ?? "";
+  if (/team\s*scroll/i.test(title)) return "team_scroll";
+  if (/discovery/i.test(title)) return "discovery";
+  const people = (e.attendees ?? []).filter((a) => a.email && !a.resource);
+  const external = people.filter((a) => !a.email.toLowerCase().endsWith(TEAM_DOMAIN));
+  if (/boardroom/i.test(title) && !external.length) {
+    const team = people.filter((a) => a.email.toLowerCase() !== "info@clubsheis.com");
+    return team.length === 2 ? "one_on_one" : "boardroom";
+  }
+  if (external.length) return "client";
+  const team = people.filter((a) => a.email.toLowerCase() !== "info@clubsheis.com");
+  if (team.length === 2) return "one_on_one";
+  if (team.length >= 3) return "internal";
+  return "other";
 }

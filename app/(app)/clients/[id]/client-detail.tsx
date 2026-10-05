@@ -251,7 +251,7 @@ export default function ClientDetail({
           </div>
         )}
 
-        {!profileCollapsed && (
+        {!profileCollapsed && !embedded && (
           <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
             <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium mb-2">
               Strategy documents

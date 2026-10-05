@@ -9,7 +9,7 @@ import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, type PricingTier } from "@/li
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTask } from "@/app/actions/tasks";
 import { restoreTask, updateToolState } from "@/app/actions/flow";
-import { PhaseDot, StatusSelect, useToast } from "./ui";
+import { DebbieBadge, PhaseDot, StatusSelect, useToast } from "./ui";
 import ProposalTool from "./proposal-tool";
 import GenTool from "./gen-tool";
 import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
@@ -113,6 +113,24 @@ export default function TaskDrawer({
               <input id="t-due" type="date" className={field} value={task.due_date ?? ""} onChange={(e) => save({ due_date: e.target.value || null })} />
             </div>
           </div>
+
+          {task.debbie_recommended && (
+            <div className="rounded-lg border border-purple-200 dark:border-purple-500/30 bg-purple-50/60 dark:bg-purple-500/10 px-3.5 py-2.5 text-sm flex flex-col gap-1">
+              <DebbieBadge source={task.debbie_source} />
+              <p className="text-slate-700 dark:text-slate-200">
+                {task.debbie_source?.meeting_id ? (
+                  <>
+                    Debbie added this from{" "}
+                    <Link className="underline" href={`/meetings/${task.debbie_source.meeting_id}`}>{task.debbie_source.meeting_title}</Link>
+                    {task.debbie_source.date ? ` (${new Date(task.debbie_source.date).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })})` : ""}. Delete it if it isn&apos;t right.
+                  </>
+                ) : (
+                  <>{task.debbie_source?.meeting_title ?? "Added by Debbie"}.</>
+                )}
+              </p>
+              {task.debbie_source?.quote && <p className="text-xs italic text-slate-500">“{task.debbie_source.quote}”</p>}
+            </div>
+          )}
 
           <ToolPanel task={task} client={client} clientTasks={clientTasks} tiers={tiers} onOpenTask={onOpenTask} onEditClient={onEditClient} />
 

@@ -114,6 +114,20 @@ export function ProgressBar({ done, total, className = "" }: { done: number; tot
   );
 }
 
+// ── Debbie Recommends badge ─────────────────────────────────────────────────
+
+export function DebbieBadge({ source }: { source?: Task["debbie_source"] }) {
+  const tip = source?.quote ? `From ${source.meeting_title}: “${source.quote}”` : source?.meeting_title ?? "Recommended by Debbie";
+  return (
+    <span
+      title={tip}
+      className="inline-flex items-center gap-1 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-100 via-pink-100 to-purple-100 text-purple-800 dark:from-amber-500/20 dark:via-pink-500/20 dark:to-purple-500/20 dark:text-purple-200 whitespace-nowrap shrink-0"
+    >
+      <Sparkles className="w-3 h-3" /> Debbie Recommends
+    </span>
+  );
+}
+
 // ── Task row (Home + client page) ───────────────────────────────────────────
 
 export function FlowTaskRow({
@@ -157,7 +171,10 @@ export function FlowTaskRow({
     <div className="group grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[160px_minmax(0,1fr)_auto_auto_24px_24px] items-center gap-x-3 gap-y-1.5 px-4 sm:px-5 py-2.5 border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
       <StatusSelect value={task.status} onChange={onStatus} className="row-start-2 sm:row-start-auto justify-self-start" />
       <button onClick={onOpen} className="min-w-0 text-left col-span-2 sm:col-span-1 row-start-1 sm:row-start-auto">
-        <span className={`block text-sm font-medium truncate ${done ? "text-slate-400 dark:text-slate-500" : ""}`}>{task.title}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className={`text-sm font-medium truncate ${done ? "text-slate-400 dark:text-slate-500" : ""}`}>{task.title}</span>
+          {task.debbie_recommended && <DebbieBadge source={task.debbie_source} />}
+        </span>
         <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 truncate">{meta}</span>
       </button>
       <span className="hidden sm:block">

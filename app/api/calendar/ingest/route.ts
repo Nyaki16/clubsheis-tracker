@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { bookingFrom, type Booking, type IncomingEvent } from "@/lib/calendar";
+import { bookingFrom, meetingKind, type Booking, type IncomingEvent } from "@/lib/calendar";
 import { CLIENT_COLORS } from "@/lib/constants";
 import { PHASES, type FlowTemplate } from "@/lib/flow";
 import { normName, phoneKey } from "@/lib/duplicates";
@@ -88,10 +88,12 @@ export async function POST(req: Request) {
     const named = all.filter((c) => normName(c.name) === normName(b.name));
     return named.length === 1 ? named[0] : null;
   };
-  const result = { leads: 0, past: 0, updated: 0, cancelled: 0, notes: 0, skipped: 0 };
+  const result = { leads: 0, past: 0, updated: 0, cancelled: 0, notes: 0, skipped: 0, meetings: 0, meeting_notes: 0 };
 
-  // Oldest first, so a person who booked more than once ends up with their latest call.
+  // Discovery bookings create or update clients. Oldest first, so a person who
+  // booked more than once ends up with their latest call.
   const bookings = events
+    .filter((e) => /discovery/i.test(e.summary ?? ""))
     .map(bookingFrom)
     .filter((b): b is Booking => !!b && !!b.start)
     .sort((a, z) => a.start.localeCompare(z.start));
@@ -192,6 +194,63 @@ export async function POST(req: Request) {
       await issueLeadTasks(sb, client.id, b, leadId);
       result.leads++;
     } else result.past++;
+  }
+
+  // Every meeting goes into Debbie's store, linked to the clients on its guest
+  // list (meetings never create clients). Changed notes queue a refresh of
+  // those clients' documents; new Team Scroll notes queue Debbie Recommends.
+  const dirty = new Set<string>();
+  for (const e of events) {
+    if (!e.start) continue;
+    const people = (e.attendees ?? []).filter((a) => a.email && !a.resource);
+    const guests = people
+      .map((a) => a.email.toLowerCase().trim())
+      .filter((em) => !em.endsWith("@clubsheis.com") && !ignore.has(em));
+    const matched = all.filter((c) => (c.email && guests.includes(String(c.email).toLowerCase())) || c.call_event_id === e.id);
+    const { data: m } = await sb.from("meetings").select("id, notes").eq("event_id", e.id).maybeSingle();
+
+    if (e.status === "cancelled") {
+      if (m && !m.notes.trim()) await sb.from("meetings").delete().eq("id", m.id);
+      continue;
+    }
+    const notes = (e.notesText ?? "").slice(0, 120000);
+    const kind = meetingKind(e);
+    const fields = {
+      title: (e.summary ?? "").trim(),
+      starts_at: e.start,
+      ends_at: e.end || null,
+      kind,
+      attendees: people.map((a) => ({ email: a.email.toLowerCase(), name: a.displayName || undefined })),
+      updated_at: new Date().toISOString(),
+    };
+    let meetingId = m?.id as string | undefined;
+    const notesChanged = !!notes && notes !== (m?.notes ?? "");
+    if (!m) {
+      const { data: created } = await sb
+        .from("meetings")
+        .insert({ ...fields, event_id: e.id, notes, notes_url: e.notesUrl || null, source: "calendar" })
+        .select("id")
+        .single();
+      meetingId = created?.id;
+      result.meetings++;
+    } else {
+      await sb
+        .from("meetings")
+        .update(notesChanged ? { ...fields, notes, notes_url: e.notesUrl || null, debbie_processed_at: null } : fields)
+        .eq("id", m.id);
+    }
+    if (!meetingId) continue;
+    if (matched.length) {
+      await sb.from("meeting_clients").upsert(
+        matched.map((c) => ({ meeting_id: meetingId, client_id: c.id })),
+        { onConflict: "meeting_id,client_id", ignoreDuplicates: true }
+      );
+      if (notesChanged) matched.forEach((c) => dirty.add(c.id));
+    }
+  }
+  if (dirty.size) {
+    await sb.from("clients").update({ docs_dirty_at: new Date().toISOString() }).in("id", [...dirty]);
+    result.meeting_notes = dirty.size;
   }
 
   await sb
