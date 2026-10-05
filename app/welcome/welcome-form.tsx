@@ -30,7 +30,7 @@ export default function WelcomeForm() {
       setSubmitting(false);
       return;
     }
-    router.replace("/daily");
+    router.replace("/home");
     router.refresh();
   }
 

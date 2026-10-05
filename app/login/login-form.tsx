@@ -31,7 +31,7 @@ export default function LoginForm() {
       setError(authError.message);
       return;
     }
-    router.replace("/daily");
+    router.replace("/home");
     router.refresh();
   }
 

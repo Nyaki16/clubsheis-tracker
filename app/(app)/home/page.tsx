@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadFlowData } from "@/lib/flow-data";
-import FlowClientsList from "./flow-clients-list";
+import HomeClient from "./home-client";
 
-export default async function ClientsPage() {
+export default async function HomePage() {
   const supabase = await createClient();
   const data = await loadFlowData(supabase);
-  return <FlowClientsList {...data} />;
+  return <HomeClient {...data} />;
 }

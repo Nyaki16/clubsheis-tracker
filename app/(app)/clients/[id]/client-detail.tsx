@@ -85,6 +85,7 @@ export default function ClientDetail({
   profiles,
   dates,
   clientFlowDocs,
+  embedded = false,
 }: {
   client: Client;
   jobs: Job[];
@@ -92,9 +93,10 @@ export default function ClientDetail({
   profiles: Profile[];
   dates: ClientDate[];
   clientFlowDocs: ClientFlowDocs;
+  embedded?: boolean;
 }) {
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profileCollapsed, setProfileCollapsed] = useState(false);
+  const [profileCollapsed, setProfileCollapsed] = useState(embedded);
   const [imgFailed, setImgFailed] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(
@@ -166,12 +168,14 @@ export default function ClientDetail({
 
   return (
     <div>
-      <Link
-        href="/clients"
-        className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-3 inline-block"
-      >
-        ← All clients
-      </Link>
+      {!embedded && (
+        <Link
+          href="/clients"
+          className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-3 inline-block"
+        >
+          ← All clients
+        </Link>
+      )}
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-5 mb-6">
         <div className="flex items-start justify-between gap-3 flex-wrap">

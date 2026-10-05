@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchClientFlowDocs } from "@/lib/client-flow";
 import type { Client, ClientDate, Job, Profile, Task } from "@/lib/types";
+import type { FlowTemplate } from "@/lib/flow";
 import ClientDetail from "./client-detail";
+import FlowClientView from "./flow-client-view";
 
 export default async function ClientDetailPage({
   params,
@@ -20,15 +22,11 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [jobsRes, tasksRes, profilesRes, datesRes, clientFlowDocs] = await Promise.all([
+  const [jobsRes, profilesRes, datesRes, templatesRes, clientFlowDocs] = await Promise.all([
     supabase
       .from("jobs")
       .select("*")
       .eq("client_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("tasks")
-      .select("*")
       .order("created_at", { ascending: false }),
     supabase.from("profiles").select("*").order("name"),
     supabase
@@ -36,24 +34,45 @@ export default async function ClientDetailPage({
       .select("*")
       .eq("client_id", id)
       .order("date", { ascending: true }),
+    supabase.from("flow_templates").select("*").order("position"),
     fetchClientFlowDocs(client.name),
   ]);
 
-  const jobs: Job[] = jobsRes.data ?? [];
-  const allTasks: Task[] = tasksRes.data ?? [];
-  const jobIds = new Set(jobs.map((j) => j.id));
-  const tasks = allTasks.filter((t) => jobIds.has(t.job_id));
+  const allJobs: Job[] = jobsRes.data ?? [];
+  const jobIds = allJobs.map((j) => j.id);
+  const { data: taskRows } = jobIds.length
+    ? await supabase.from("tasks").select("*").in("job_id", jobIds).order("created_at", { ascending: false })
+    : { data: [] as Task[] };
+  const tasks: Task[] = taskRows ?? [];
+
+  const flowJob = allJobs.find((j) => j.kind === "flow");
+  const otherJobs = allJobs.filter((j) => j.kind !== "flow");
+  const flowTasks = flowJob ? tasks.filter((t) => t.job_id === flowJob.id) : [];
+  const otherTasks = tasks.filter((t) => t.job_id !== flowJob?.id);
   const profiles: Profile[] = profilesRes.data ?? [];
   const dates: ClientDate[] = datesRes.data ?? [];
 
   return (
-    <ClientDetail
-      client={client as Client}
-      jobs={jobs}
-      tasks={tasks}
-      profiles={profiles}
-      dates={dates}
-      clientFlowDocs={clientFlowDocs}
-    />
+    <div className="flex flex-col gap-8">
+      <FlowClientView
+        client={client as Client}
+        tasks={flowTasks}
+        profiles={profiles}
+        templates={(templatesRes.data ?? []) as FlowTemplate[]}
+        migrated={!templatesRes.error}
+      />
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">Profile, key dates &amp; other jobs</h2>
+        <ClientDetail
+          client={client as Client}
+          jobs={otherJobs}
+          tasks={otherTasks}
+          profiles={profiles}
+          dates={dates}
+          clientFlowDocs={clientFlowDocs}
+          embedded
+        />
+      </section>
+    </div>
   );
 }

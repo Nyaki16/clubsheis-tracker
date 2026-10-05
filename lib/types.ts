@@ -71,6 +71,19 @@ export type Client = {
   research_bible_doc_url: string | null;
   brand_voice_doc_url: string | null;
   strategy_brief_doc_url: string | null;
+  // Client flow
+  email: string | null;
+  phone: string | null;
+  package: "lead" | "ghutte" | "page" | "content" | "ads" | "full" | null;
+  lead_id: string | null;
+  is_past_lead: boolean;
+  source: "manual" | "calendar" | "client_flow";
+  call_at: string | null;
+  call_title: string | null;
+  call_event_id: string | null;
+  call_notes_url: string | null;
+  call_message: string | null;
+  clock_started_on: string | null;
   created_at: string;
 };
 
@@ -106,6 +119,7 @@ export type Job = {
   name: string;
   stage: "briefing" | "planning" | "scripts" | "shoot" | "edit" | "qa" | "delivered";
   due_date: string | null;
+  kind: "job" | "flow";
   created_at: string;
 };
 
@@ -131,6 +145,11 @@ export type Task = {
   approved: boolean;
   originator_id: string | null;
   leave_request_id: string | null;
+  // Client flow
+  phase: "sales" | "onboarding" | "yellow" | "production" | "delivery" | null;
+  tool: string | null;
+  tool_state: Record<string, unknown>;
+  position: number | null;
   created_at: string;
   updated_at: string;
 };
