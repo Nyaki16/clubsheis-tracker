@@ -63,6 +63,16 @@ export default async function ClientDetailPage({
   const discovery = flowTasks.find((t) => t.tool === "discovery")?.tool_state as Record<string, string> | undefined;
   const words = (t: unknown) => String(t ?? "").split(/\s+/).filter(Boolean).length;
   const discoveryWords = words(discovery?.need) + words(discovery?.transcript || client.call_notes) + words(client.call_message);
+  const proposalState = flowTasks.find((t) => t.tool === "proposal")?.tool_state as
+    | { data?: { phases: { title: string; package?: string }[] }; sent_at?: string }
+    | undefined;
+  const { data: pkgRow } = client.package ? await supabase.from("packages").select("label").eq("id", client.package).maybeSingle() : { data: null };
+  const briefScope = {
+    packageName: pkgRow?.label ?? (client.package ? client.package : "no package yet"),
+    proposal: proposalState?.data
+      ? { phases: proposalState.data.phases.map((p) => ({ title: p.title, package: p.package })), sentAt: proposalState.sent_at ?? null }
+      : null,
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -85,6 +95,7 @@ export default async function ClientDetailPage({
           briefTasks={tasks.filter((t) => t.brief_id)}
           discoveryWords={discoveryWords}
           hasFlow={!!flowJob}
+          briefScope={briefScope}
         />
         <ClientDetail
           client={client as Client}

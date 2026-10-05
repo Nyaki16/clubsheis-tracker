@@ -2,7 +2,7 @@
 // prompt for a one-page team brief. Server-only.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Client, Task } from "./types";
-import { packageLabel } from "./flow";
+import { PHASES, packageLabel, rand, type FlowTemplate, type PricingTier } from "./flow";
 import { loadPackages } from "./packages";
 import { yellowSheetText } from "./yellow-sheet";
 import type { ProposalData } from "./proposal-template";
@@ -18,6 +18,8 @@ export type BriefRequest = {
   meetingIds: string[];
   links: string[];
   pasted?: string;
+  /** Brief one part of the proposal only: a phase title from Section Three. */
+  focus?: string | null;
 };
 
 type Source = { label: string; text: string };
@@ -122,10 +124,27 @@ export async function gatherBriefSources(sb: SupabaseClient, req: BriefRequest) 
   for (const link of req.links.map((l) => l.trim()).filter(Boolean).slice(0, 6)) sources.push(await readLink(sb, link));
   if (req.pasted?.trim()) sources.push({ label: "Notes added by the team", text: req.pasted.trim() });
 
-  // Background that sharpens the brief but isn't enough on its own.
+  // The scope: what the client is buying. The brief turns this into work.
+  const proposalTask = flowTasks.find((t) => t.tool === "proposal");
+  const proposalState = (proposalTask?.tool_state ?? {}) as { data?: ProposalData; sent_at?: string; state?: string };
+  const proposal = proposalState.data ?? null;
+  const [{ data: tierRows }, { data: templateRows }, { data: people }, { data: pkgRow }] = await Promise.all([
+    sb.from("pricing_tiers").select("*"),
+    c.package && c.package !== "lead" ? sb.from("flow_templates").select("*").eq("package", c.package).order("position") : Promise.resolve({ data: [] }),
+    sb.from("profiles").select("id, name"),
+    c.package ? sb.from("packages").select("label, description").eq("id", c.package).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const cardNames = new Set((proposal?.cards ?? []).map((k) => k.name.trim().toLowerCase()));
+  const tiers = ((tierRows ?? []) as PricingTier[]).filter((t) => cardNames.has(t.name.trim().toLowerCase()));
+  const who = (id: string | null) => (people ?? []).find((p) => p.id === id)?.name ?? "the client's lead";
+  const packageWork = ((templateRows ?? []) as FlowTemplate[])
+    .filter((t) => t.phase === "production" || t.phase === "delivery")
+    .map((t) => `- ${t.title} (${PHASES.find((p) => p.id === t.phase)?.label}, ${who(t.default_assignee_id)})`)
+    .join("\n");
+
+  // Background that sharpens the brief.
   const ys = flowTasks.find((t) => t.tool === "yellow");
   const yellowSheet = ys ? yellowSheetText(ys.tool_state) : "";
-  const proposal = (flowTasks.find((t) => t.tool === "proposal")?.tool_state as { data?: ProposalData } | undefined)?.data;
   const { data: profileDoc } = await sb
     .from("client_documents")
     .select("content")
@@ -135,59 +154,108 @@ export async function gatherBriefSources(sb: SupabaseClient, req: BriefRequest) 
     .limit(1)
     .maybeSingle();
 
-  return { client: c, sources, yellowSheet, proposal, profile: String(profileDoc?.content ?? "") };
+  return {
+    client: c,
+    sources,
+    yellowSheet,
+    proposal,
+    proposalSentAt: proposalState.sent_at ?? null,
+    tiers,
+    packageInfo: pkgRow as { label: string; description: string } | null,
+    packageWork,
+    team: (people ?? []).map((p) => p.name).join(", "),
+    profile: String(profileDoc?.content ?? ""),
+  };
 }
 
-function proposalSummary(p: ProposalData) {
-  const plan = p.phases
-    .map((ph) => `- ${ph.title}${ph.package ? ` (${ph.package})` : ""}: ${ph.body}${(ph.creates ?? []).map((c) => `\n  · ${c.title}: ${c.detail}`).join("")}`)
+function proposalScope(p: ProposalData, focus?: string | null) {
+  const phases = focus ? p.phases.filter((ph) => ph.title === focus) : p.phases;
+  const plan = (phases.length ? phases : p.phases)
+    .map(
+      (ph) =>
+        `### ${ph.title}${ph.package ? ` — paid for by: ${ph.package}` : ""}\n${ph.body}${
+          ph.creates?.length ? `\nWhat we promised to create:\n${ph.creates.map((c) => `- ${c.title}: ${c.detail}`).join("\n")}` : ""
+        }`
+    )
+    .join("\n\n");
+  const cards = p.cards
+    .map((c) => `- ${c.name}: ${c.price} ${c.cadence}${c.totalNote ? ` (${c.totalNote})` : ""}${c.features.length ? `\n  Includes: ${c.features.join("; ")}` : ""}`)
     .join("\n");
-  const cards = p.cards.map((c) => `- ${c.name}: ${c.price} ${c.cadence}${c.features.length ? ` (includes: ${c.features.join("; ")})` : ""}`).join("\n");
-  return `What we proposed:\n${plan}\n\nWhat they're paying for:\n${cards}`;
+  return [
+    p.planLead && `Strategy: ${p.planLead}`,
+    `What they're paying for:\n${cards}`,
+    `What we'll do together (Section Three of the proposal):\n${plan}`,
+    p.outcomes?.length && `Results we promised:\n${p.outcomes.map((o) => `- ${o}`).join("\n")}`,
+    p.heard?.length && `What we heard on the call:\n${p.heard.map((h) => `- ${h}`).join("\n")}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export function briefPrompt(input: Awaited<ReturnType<typeof gatherBriefSources>>, req: BriefRequest) {
-  const { client, sources, yellowSheet, proposal, profile } = input;
-  return `You are writing a one-page project brief for the ClubSheIs team (a South African digital marketing and content agency). The brief tells a team member exactly what to make for a client and how, so they can start work without going back to the meeting notes.
+  const { client, sources, yellowSheet, proposal, proposalSentAt, tiers, packageInfo, packageWork, team, profile } = input;
+  const scope = [
+    `Package: ${packageInfo?.label ?? packageLabel(client.package)}${packageInfo?.description ? ` (${packageInfo.description})` : ""}`,
+    proposal
+      ? `PROPOSAL${proposalSentAt ? ` (sent ${new Date(proposalSentAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })})` : " (draft)"}:\n${proposalScope(proposal, req.focus)}`
+      : "No proposal has been written for this client yet.",
+    tiers.length && `How we define what they bought:\n${tiers.map((t) => `- ${t.name} (${rand(t.amount)}${t.cadence === "month" ? "/month" : " once-off"}): ${t.description}`).join("\n")}`,
+    packageWork && `Our standard production and delivery work for this package (task, phase, owner):\n${packageWork}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return `You are writing a one-page production brief for the ClubSheIs team (a South African digital marketing and content agency). The brief turns what the client is buying into exact work, so the team member can start without reading the proposal or the call notes.
 
 PROJECT: ${req.title}
-CLIENT: ${client.name}${client.business_name ? ` · ${client.business_name}` : ""} · package: ${packageLabel(client.package)}
-${req.instructions?.trim() ? `\nWHAT THE TEAM WANTS FROM THIS BRIEF:\n${req.instructions.trim()}\n` : ""}
-=== SOURCE NOTES (the brief must come from these) ===
-${sources.map((s) => `--- ${s.label}\n${clip(s.text, 30000)}`).join("\n\n")}
-${proposal ? `\n=== THE PROPOSAL THEY ACCEPTED OR WERE SENT (background) ===\n${clip(proposalSummary(proposal), 8000)}\n` : ""}${
-    yellowSheet ? `\n=== THEIR YELLOW SHEET (background: offer, business, brand voice) ===\n${clip(yellowSheet, 10000)}\n` : ""
-  }${profile ? `\n=== CLIENT PROFILE (background) ===\n${clip(profile, 6000)}\n` : ""}
+CLIENT: ${client.name}${client.business_name ? ` · ${client.business_name}` : ""}
+TEAM: ${team}. Gizelle leads client work and is the client's contact; Mpume builds pages; Xoli makes video and content; Nyaki does quality checks.
+${req.focus ? `\nTHIS BRIEF COVERS ONLY THIS PART OF THE PROPOSAL: ${req.focus}. Leave the other parts out.\n` : ""}${req.instructions?.trim() ? `\nWHAT THE TEAM WANTS FROM THIS BRIEF:\n${req.instructions.trim()}\n` : ""}
+=== 1. THE SCOPE (what they're paying for: the brief is built on this) ===
+${clip(scope, 16000)}
+
+=== 2. THE CLIENT'S OWN WORDS (the detail that makes each deliverable specific) ===
+${sources.map((s) => `--- ${s.label}\n${clip(s.text, 30000)}`).join("\n\n") || "No notes ticked."}
+${yellowSheet ? `\n=== 3. THEIR YELLOW SHEET (offer, business, brand voice) ===\n${clip(yellowSheet, 10000)}\n` : ""}${
+    profile ? `\n=== 4. CLIENT PROFILE ===\n${clip(profile, 6000)}\n` : ""
+  }
+HOW TO BUILD THE BRIEF:
+- Start from the scope. Every deliverable must be something in the proposal's "What we promised to create", the package inclusions, or our standard work for this package. Then make it specific with the client's own details: their offer and its name, price, audience, the problems and objections they mentioned, examples and links they gave, their goal and numbers.
+- Make each deliverable production-ready, not a label. A page build lists the page's sections in order, each with its job and key message, plus forms, checkout and integrations. Copy lists each piece with its purpose, angle and call to action. Content lists each piece with format, hook or topic and where it goes. Emails list each email with its job in the sequence and subject-line angle. Ads list audiences, offer and creative angles.
+- If the client asked for something the scope doesn't cover, put it under Out of scope so nobody builds it unpaid.
+- Never invent facts, prices, dates or quantities. Anything important that's missing goes under Open questions as [GAP: …].
+
 WRITE THE BRIEF IN MARKDOWN, using exactly these sections:
 
 # ${req.title}
-One line under the heading: the client, and the deliverable in a few words.
+One line: the client, the package, and what this brief delivers.
+
+## Scope
+Two or three bullets: what's being paid for (package and price as in the proposal) and what this brief covers. Then a line **Out of scope:** listing anything discussed that isn't paid for (or "Nothing discussed outside the scope").
 
 ## Objective
-Two or three sentences: what this project must achieve for the client and how we'll know it worked.
+Two or three sentences: what this work must achieve for the client, using the goal and results from the proposal, and how we'll know it worked.
 
-## What the client told us
-Three to six bullets with the specifics that shape the work: their offer, audience, what they've tried, what they want, words or examples they used.
+## The client in brief
+Three to five bullets the team must know: offer, audience, what they've tried, what's stuck, voice. Specifics only.
 
 ## Deliverables
-A numbered list. Each item: **the thing** (bold) then the spec: format, quantity, length or size, platform, and what "done" looks like. Only what was agreed or clearly implied in the notes.
+Numbered. Each: **the thing** (bold), the owner from the team in brackets, then the production-ready spec as short sub-bullets, ending with "Done when: …".
 
-## How to approach it
-Bullets with clear instructions: angle and key messages, brand voice, must include, must avoid, references they gave.
+## Instructions
+Bullets written to the team member ("Write…", "Use…", "Don't…"): angle and key messages, brand voice, must include, must avoid, references.
 
 ## Assets and access
-Bullets: what the team needs (logins, brand files, photos, copy) and whether we have it or must ask the client.
+Bullets: what's needed (logins, brand files, photos, testimonials, copy) and whether we have it or must ask the client via Gizelle.
 
 ## Timeline
-Dates or order of work if the notes give them.
+Order of work and dates if known; otherwise the order of work.
 
 ## Open questions
-Bullets marked [GAP: …] for anything the team must confirm with the client before or during the work.
+Bullets marked [GAP: …].
 
 RULES:
-- Fit on one page: about 350 to 550 words in total. Short bullets, no paragraphs longer than three sentences.
-- Every line must be specific to this client and this project and must come from the notes. No filler, no generic marketing advice, no restating headings.
-- Never invent facts, prices, dates or quantities. If something important isn't in the notes, put it under Open questions as [GAP: …] instead of guessing.
-- Write instructions directly to the team member ("Write…", "Use…", "Don't…"). South African English.
-- Output only the brief, starting with the # heading.`;
+- One page: about 450 to 700 words. Short bullets; no paragraph longer than three sentences.
+- Every line must be specific to this client and this scope. No filler, no generic marketing advice, no restating headings.
+- South African English. Output only the brief, starting with the # heading.`;
 }

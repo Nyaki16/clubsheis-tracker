@@ -16,7 +16,10 @@ const btn = "text-xs font-medium border border-slate-300 dark:border-slate-600 p
 const btnPrimary = "text-xs font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50 inline-flex items-center gap-1.5";
 const day = (d: string | null) => (d ? new Date(d).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-type Form = { title: string; instructions: string; useDiscovery: boolean; meetingIds: string[]; links: string; pasted: string };
+type Form = { title: string; instructions: string; useDiscovery: boolean; meetingIds: string[]; links: string; pasted: string; focus: string };
+
+/** What the brief builds on: the client's package and the proposal's Section Three. */
+export type BriefScope = { packageName: string; proposal: { phases: { title: string; package?: string }[]; sentAt: string | null } | null };
 
 // Read the generate route's progress stream until it reports done or error.
 async function runBrief(payload: Record<string, unknown>, onProgress: (chars: number) => void) {
@@ -57,6 +60,7 @@ export default function ProjectBriefs({
   briefTasks,
   discoveryWords,
   hasFlow,
+  scope,
 }: {
   client: Client;
   briefs: ProjectBrief[];
@@ -65,6 +69,7 @@ export default function ProjectBriefs({
   briefTasks: Task[];
   discoveryWords: number;
   hasFlow: boolean;
+  scope: BriefScope;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -77,6 +82,7 @@ export default function ProjectBriefs({
         client={client}
         meetings={meetings}
         discoveryWords={discoveryWords}
+        scope={scope}
         onDone={(id) => { setCreating(false); setOpenId(id); }}
         onCancel={() => setCreating(false)}
       />
@@ -149,18 +155,20 @@ function BriefForm({
   client,
   meetings,
   discoveryWords,
+  scope,
   onDone,
   onCancel,
 }: {
   client: Client;
   meetings: Meeting[];
   discoveryWords: number;
+  scope: BriefScope;
   onDone: (id: string) => void;
   onCancel: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [f, setF] = useState<Form>({ title: "", instructions: "", useDiscovery: discoveryWords > 0, meetingIds: [], links: "", pasted: "" });
+  const [f, setF] = useState<Form>({ title: "", instructions: "", useDiscovery: discoveryWords > 0, meetingIds: [], links: "", pasted: "", focus: "" });
   const [busy, setBusy] = useState(false);
   const [chars, setChars] = useState(0);
   const [error, setError] = useState("");
@@ -180,6 +188,7 @@ function BriefForm({
           meetingIds: f.meetingIds,
           links: f.links.split(/\s+/).filter((l) => /^https?:\/\//i.test(l)),
           pasted: f.pasted,
+          focus: f.focus || null,
         },
         setChars
       );
@@ -206,8 +215,33 @@ function BriefForm({
         <input id="b-title" className={field} value={f.title} onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} placeholder="e.g. Sales page build, October content shoot, Meta ads launch" />
       </div>
 
+      <div className={`text-xs rounded-md px-3 py-2 ${scope.proposal ? "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300" : "bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200"}`}>
+        {scope.proposal ? (
+          <>
+            Builds on <b>{scope.packageName}</b> and the proposal{scope.proposal.sentAt ? ` sent ${day(scope.proposal.sentAt)}` : " (not sent yet)"}: what they&apos;re paying for and what we promised to create, made specific with the notes below.
+          </>
+        ) : (
+          <>No proposal for {client.name.split(" ")[0]} yet, so the brief can only use the package ({scope.packageName}) and the notes below. Write the proposal first for a sharper brief.</>
+        )}
+      </div>
+
+      {scope.proposal && scope.proposal.phases.length > 1 && (
+        <div>
+          <label className={label} htmlFor="b-focus">Which part of the proposal?</label>
+          <select id="b-focus" className={field} value={f.focus} onChange={(e) => setF((x) => ({ ...x, focus: e.target.value }))}>
+            <option value="">All of it</option>
+            {scope.proposal.phases.map((p) => (
+              <option key={p.title} value={p.title}>
+                {p.title}
+                {p.package ? ` (${p.package})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div>
-        <p className={label}>Write it from</p>
+        <p className={label}>Client notes to use</p>
         <div className="flex flex-col gap-1.5 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" className="w-4 h-4 accent-purple-600" checked={f.useDiscovery} disabled={!discoveryWords} onChange={(e) => setF((x) => ({ ...x, useDiscovery: e.target.checked }))} />

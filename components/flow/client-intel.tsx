@@ -7,7 +7,7 @@ import type { Client, ClientDocument, Meeting, Profile, ProjectBrief, Task } fro
 import { addMeeting, deleteMeeting, saveDocEdit, updateMeeting } from "@/app/actions/client-intel";
 import { useToast } from "./ui";
 import Markdown from "./markdown";
-import ProjectBriefs from "./project-briefs";
+import ProjectBriefs, { type BriefScope } from "./project-briefs";
 
 type Kind = "profile" | "strategy";
 type Tab = Kind | "briefs";
@@ -26,6 +26,7 @@ export default function ClientIntel({
   briefTasks,
   discoveryWords,
   hasFlow,
+  briefScope,
 }: {
   client: Client;
   meetings: Meeting[];
@@ -35,6 +36,7 @@ export default function ClientIntel({
   briefTasks: Task[];
   discoveryWords: number;
   hasFlow: boolean;
+  briefScope: BriefScope;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -123,6 +125,7 @@ export default function ClientIntel({
               briefTasks={briefTasks}
               discoveryWords={discoveryWords}
               hasFlow={hasFlow}
+              scope={briefScope}
             />
           ) : doc ? (
             <>

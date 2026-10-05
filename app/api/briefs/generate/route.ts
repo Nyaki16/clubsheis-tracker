@@ -25,10 +25,10 @@ export async function POST(req: Request) {
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : "Couldn't read the notes." }, { status: 400 });
   }
-  const words = input.sources.reduce((n, s) => n + wordCount(s.text), 0);
+  const words = input.sources.reduce((n, s) => n + wordCount(s.text), 0) + (input.proposal ? 200 : 0);
   if (words < 80) {
     return Response.json(
-      { error: `There's too little to brief from (${words} words of notes). Tick the meetings or discovery call it's based on, add a link, or paste the notes.` },
+      { error: `There's too little to brief from (${words} words of notes and no proposal). Tick the discovery call or meetings it's based on, add a link, or paste the notes.` },
       { status: 422 }
     );
   }
