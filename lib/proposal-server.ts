@@ -52,6 +52,12 @@ export type ProposalExtras = {
   taskNotes?: string;
   /** Other meetings with this client that have notes (newest first). */
   meetings?: { title: string; date: string | null; notes: string }[];
+  /** Gemini notes saved on the client, when the Discovery task has no transcript. */
+  callNotes?: string;
+  /** The client's Yellow Sheet answers, if they've submitted it. */
+  yellowSheet?: string;
+  /** Debbie's latest Client Profile. */
+  profile?: string;
 };
 
 const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n)}… [cut]` : t);
@@ -63,7 +69,7 @@ function fixedPricing(cards: PricingCard[]) {
 }
 
 export function proposalPrompt(opts: { client: Client; discovery: Task | null; tiers: PricingTier[]; notes?: string } & ProposalExtras) {
-  const { client, discovery, tiers, notes, cards, taskNotes, meetings } = opts;
+  const { client, discovery, tiers, notes, cards, taskNotes, meetings, callNotes, yellowSheet, profile } = opts;
   const ts = discovery?.tool_state ?? {};
   const fixed = cards?.filter((c) => c.name.trim() || c.price.trim()) ?? [];
   return `You are writing a client proposal for Club She Is, a digital marketing and content production agency in South Africa run by Kopano Shimange and Nyaki Tshabangu.
@@ -76,8 +82,10 @@ WHAT THEY TOLD US THEY NEED:
 ${s(ts.need) || client.call_message || "No notes provided"}
 
 DISCOVERY CALL NOTES / TRANSCRIPT:
-${s(ts.transcript) || "Not provided"}
-${
+${s(ts.transcript) || callNotes || "Not provided"}
+${yellowSheet ? `\nTHEIR YELLOW SHEET (their own answers about their offer, business and brand voice):\n${clip(yellowSheet, 12000)}\n` : ""}${
+  profile ? `\nCLIENT PROFILE (our team's running summary of everything we know about them):\n${clip(profile, 8000)}\n` : ""
+}${
   meetings?.length
     ? `\nOTHER CONVERSATIONS WITH THIS CLIENT (newest first, use anything that changes or adds to the picture):\n${meetings
         .map((m) => `--- ${m.title}${m.date ? ` · ${m.date.slice(0, 10)}` : ""}\n${clip(m.notes, 8000)}`)
@@ -85,6 +93,8 @@ ${
     : ""
 }${taskNotes?.trim() ? `\nTEAM NOTES ON THIS PROPOSAL:\n${taskNotes.trim()}\n` : ""}
 IMPORTANT: Do NOT copy the transcript or notes back. Analyse what the client needs and write a personalised proposal. Reference specific things from the call so it is obvious you listened.
+
+EVIDENCE RULE: every point in "heard", every opportunity paragraph and every phase body must rest on something in the material above. Use their specifics: names of their products or programmes, prices they charge, numbers they gave, platforms they use, who their customers are, what they tried and what happened. If a sentence would be equally true for any small business, delete it. If the material doesn't cover something, say less rather than filling the gap.
 
 ${
   fixed.length
@@ -124,7 +134,7 @@ HOW TO FILL THE FIELDS:
   * price and name MUST be copied exactly from ${fixed.length ? "the pricing chosen by the team" : "the price list above"}. Never invent, round, discount, or blend prices.
   * totalNote: only when a minimum term applies. It must contain the computed rand total, in the form "3 months · R22,500 total" — multiply the monthly price by the number of months. Never write a bare term like "minimum 3 months" with no total. When no minimum term applies, use an empty string.
   * eyebrow: when phased, the full label in the form "Phase One · Foundation · Months 1 to 3" — the phase number, a short name for the phase, and the month range, separated by middots. Never just "Phase One". When there is only one card, use an empty string.
-  * features: the deliverables for that package, written for this client rather than copied verbatim from the list.
+  * features: three to six deliverables for that package, each under ten words, written for this client rather than copied verbatim from the list. The whole investment section must fit on one page, so keep them short; the detail belongs in Section Three.
 
 - nextSteps: five to seven concrete steps in order, starting with signing and ending with the work being underway.
 
@@ -132,7 +142,8 @@ HOW TO FILL THE FIELDS:
 
 - closingParagraph: two or three sentences, under 45 words in total. Warm, confident, no hard sell.
 
-NO FILLER: every sentence must carry information specific to this client or to the work. Never write generic marketing lines ("In today's digital world…", "We're excited to…", "This is where we come in"), never restate the heading, and never pad a section to look longer. If you don't know something, leave it out rather than inventing it.
+NO FILLER: every sentence must carry information specific to this client or to the work. Never write generic marketing lines, never restate the heading, and never pad a section to look longer. If you don't know something, leave it out rather than inventing it.
+Banned phrases and anything like them: "in today's digital world/landscape", "we're excited to", "this is where we come in", "take your business to the next level", "unlock your potential", "elevate your brand", "seamless", "leverage", "game-changer", "stand out from the crowd", "reach your target audience", "online presence", "it's not just about", "we understand that".
 
 TONE: Professional but human — like a smart friend who is great at marketing. Not corporate, not salesy. Confident and clear. South African English (organise, optimise, programme). Use the rand symbol as R with a thousands separator.
 

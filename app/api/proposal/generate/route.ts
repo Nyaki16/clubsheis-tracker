@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadProposalContext, proposalPrompt, type ProposalState } from "@/lib/proposal-server";
 import { PROPOSAL_JSON_SCHEMA, type PricingCard, type ProposalData } from "@/lib/proposal-template";
 import type { PricingTier } from "@/lib/flow";
+import { yellowSheetText } from "@/lib/yellow-sheet";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,10 +29,6 @@ export async function POST(req: Request) {
   const ctx = await loadProposalContext(supabase, taskId);
   if (!ctx) return Response.json({ error: "Proposal task not found." }, { status: 404 });
 
-  const dts = ctx.discovery?.tool_state ?? {};
-  if (!dts.need && !dts.transcript && !ctx.client.call_message) {
-    return Response.json({ error: "Add the discovery call notes first." }, { status: 400 });
-  }
 
   const { data: tierRows } = await supabase.from("pricing_tiers").select("*").order("position");
   const tiers = (tierRows ?? []) as PricingTier[];
@@ -45,7 +42,57 @@ export async function POST(req: Request) {
     .slice(0, 4)
     .map((m) => ({ title: m.title, date: m.starts_at, notes: m.notes }));
   const fixed = (cards ?? []).filter((c) => c.name?.trim() || c.price?.trim());
-  const prompt = proposalPrompt({ client: ctx.client, discovery: ctx.discovery, tiers, notes, cards: fixed, taskNotes: ctx.task.notes, meetings });
+
+  // Everything else we know about them: Gemini notes saved on the client, the
+  // Yellow Sheet if they've filled it in, and Debbie's Client Profile.
+  const callNotes = String(ctx.client.call_notes ?? "").trim();
+  const ys = ctx.siblings.find((t) => t.tool === "yellow");
+  const yellowSheet = ys ? yellowSheetText(ys.tool_state) : "";
+  const { data: profileDoc } = await supabase
+    .from("client_documents")
+    .select("content")
+    .eq("client_id", ctx.client.id)
+    .eq("kind", "profile")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const profile = String(profileDoc?.content ?? "").trim();
+
+  // A proposal is only as specific as what the client told us. Without real
+  // notes the model can only write generic copy, so stop and say what's missing.
+  const words = (t: unknown) => String(t ?? "").split(/\s+/).filter(Boolean).length;
+  const dts = ctx.discovery?.tool_state ?? {};
+  const material =
+    words(dts.need) +
+    words(transcript || callNotes) +
+    words(ctx.client.call_message) +
+    words(yellowSheet) +
+    meetings.reduce((n, m) => n + words(m.notes), 0) +
+    words(notes) +
+    words(ctx.task.notes);
+  if (material < 150) {
+    const first = ctx.client.name.split(" ")[0];
+    const why = transcript || callNotes ? "" : " Gemini didn't take notes on this call, so nothing came in automatically.";
+    return Response.json(
+      {
+        error: `There's too little from the call to write a specific proposal (${material} words of notes).${why} Paste the transcript or your notes from the call into Discovery call + notes, with what ${first} sells, who to, what they've tried and what they want, then generate again.`,
+      },
+      { status: 422 }
+    );
+  }
+
+  const prompt = proposalPrompt({
+    client: ctx.client,
+    discovery: ctx.discovery,
+    tiers,
+    notes,
+    cards: fixed,
+    taskNotes: ctx.task.notes,
+    meetings,
+    callNotes: transcript ? "" : callNotes,
+    yellowSheet,
+    profile,
+  });
 
   const save = async (patch: ProposalState, status?: string) => {
     const payload: Record<string, unknown> = { tool_state: { ...(ctx.task.tool_state ?? {}), ...patch } };

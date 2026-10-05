@@ -75,6 +75,7 @@ export default function ProposalTool({
   const discovery = clientTasks.find((t) => t.tool === "discovery");
   const dts = (discovery?.tool_state ?? {}) as Record<string, string>;
   const hasNotes = !!(dts.need || dts.transcript || client.call_message);
+  const noteWords = callWords(dts, client);
 
   const [notes, setNotes] = useState(ts.notes ?? "");
   const [busy, setBusy] = useState(false);
@@ -107,7 +108,8 @@ export default function ProposalTool({
   if (!ts.data || busy) {
     return (
       <div className="flex flex-col gap-3">
-        <InputChip ok={hasNotes} label="Discovery call notes" />
+        <InputChip ok={noteWords >= THIN} label={`Discovery call notes · ${noteWords} words`} />
+        {noteWords < THIN && <ThinNotes words={noteWords} name={client.name} />}
         <p className="text-xs text-slate-500">
           Turns the discovery notes into the 8-page proposal PDF, picking tiers from your Pricing page, then writes a short cover email that summarises it.
         </p>
@@ -150,9 +152,26 @@ export default function ProposalTool({
         setEditing(true);
       })}
       onRegenerate={generate}
+      noteWords={noteWords}
       onEditClient={onEditClient}
       error={error}
     />
+  );
+}
+
+// Below this, the generator stops: there isn't enough from the call to be specific.
+const THIN = 150;
+const wc = (t: unknown) => String(t ?? "").split(/\s+/).filter(Boolean).length;
+function callWords(dts: Record<string, string>, client: Client) {
+  return wc(dts.need) + wc(dts.transcript || client.call_notes) + wc(client.call_message);
+}
+
+function ThinNotes({ words, name }: { words: number; name: string }) {
+  return (
+    <p className="text-xs text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10 rounded-md px-3 py-2">
+      Only {words} words from the call so far. A proposal needs what {name.split(" ")[0]} actually told us (what they sell, who to, what they&apos;ve tried,
+      what they want), or it comes out generic. Add the transcript or your notes in <b>Discovery call + notes</b> first.
+    </p>
   );
 }
 
@@ -175,6 +194,7 @@ function ProposalEditor({
   onRegenerate,
   onEditClient,
   error,
+  noteWords,
 }: {
   task: Task;
   client: Client;
@@ -186,6 +206,7 @@ function ProposalEditor({
   onRegenerate: (notes: string, cards: PricingCard[]) => void;
   onEditClient?: () => void;
   error: string;
+  noteWords: number;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -346,6 +367,7 @@ function ProposalEditor({
             value={regenNotes}
             onChange={(e) => setRegenNotes(e.target.value)}
           />
+          {noteWords < THIN && <ThinNotes words={noteWords} name={client.name} />}
           <p className="text-xs text-slate-500">
             Rewrites the whole proposal and email. It keeps the pricing above exactly as you&apos;ve set it, and reads these notes, this task&apos;s Notes,
             the discovery transcript and any later meetings with {first}.

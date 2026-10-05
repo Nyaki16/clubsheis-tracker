@@ -125,38 +125,59 @@ function tintedPanel(
   doc.y = top + total
 }
 
+/** Sizes for a pricing card. The investment page shrinks these until every card fits on one page. */
+type CardStyle = { k: number; cols: 1 | 2 }
+const CARD_STYLES: CardStyle[] = [
+  { k: 1, cols: 1 },
+  { k: 0.9, cols: 1 },
+  { k: 0.9, cols: 2 },
+  { k: 0.8, cols: 2 },
+  { k: 0.72, cols: 2 },
+  { k: 0.64, cols: 2 },
+  { k: 0.56, cols: 2 },
+]
+
 /**
  * One pricing card: maroon top rule, package name, price row, deliverables.
  *
  * The border has to be stroked before the content is drawn, so the exact height
- * is computed first. Measurement and drawing therefore walk the same offsets —
- * keep the two `y` sequences below in step or the box will not match its
- * contents. `moveDown` is deliberately avoided here for that reason: it resolves
- * against the current font size, which changes throughout the card.
+ * is computed first, from the same numbers the drawing uses. With `measureOnly`
+ * it returns that height without drawing, so the investment page can choose a
+ * size that keeps every card on one page.
  */
-function pricingCard(doc: Doc, card: PricingCard) {
-  const padX = 34
-  const padY = 26
+function pricingCard(doc: Doc, card: PricingCard, st: CardStyle = CARD_STYLES[0], measureOnly = false): number {
+  const k = st.k
+  const padX = 34 * k
+  const padY = 26 * k
   const innerWidth = CONTENT - padX * 2
-  const PRICE_SIZE = 32
-  const priceRowH = 56
+  const PRICE_SIZE = 32 * k
+  const priceRowH = 56 * k
+  const nameSize = 22 * k
+  const subSize = Math.max(11 * k, 7)
+  const featSize = Math.max(10 * k, 6.5)
+  const featGap = 8 * k
+  const colGap = 18
+  const colW = st.cols === 2 ? (innerWidth - colGap) / 2 : innerWidth
 
   // --- measure -------------------------------------------------------
   doc.font('Helvetica').fontSize(8)
   const hEyebrow = card.eyebrow
-    ? doc.heightOfString(card.eyebrow.toUpperCase(), { width: innerWidth, characterSpacing: 1.5 }) + 10
+    ? doc.heightOfString(card.eyebrow.toUpperCase(), { width: innerWidth, characterSpacing: 1.5 }) + 10 * k
     : 0
-  doc.font('Helvetica').fontSize(22)
-  const hName = doc.heightOfString(card.name, { width: innerWidth }) + 4
-  doc.font('Helvetica').fontSize(11)
-  const hSub = card.subtitle ? doc.heightOfString(card.subtitle, { width: innerWidth }) + 16 : 8
-  doc.font('Helvetica').fontSize(10)
-  const featureHeights = card.features.map(f => doc.heightOfString(f, { width: innerWidth - 16, lineGap: 3 }))
-  const hFeatures = featureHeights.reduce((s, h) => s + h + 8, 0)
-  const total = padY + hEyebrow + hName + hSub + priceRowH + 14 + hFeatures + padY - 8
+  doc.font('Helvetica').fontSize(nameSize)
+  const hName = doc.heightOfString(card.name, { width: innerWidth }) + 4 * k
+  doc.font('Helvetica').fontSize(subSize)
+  const hSub = card.subtitle ? doc.heightOfString(card.subtitle, { width: innerWidth }) + 16 * k : 8 * k
+  doc.font('Helvetica').fontSize(featSize)
+  const featureHeights = card.features.map(f => doc.heightOfString(f, { width: colW - 16, lineGap: 3 * k }))
+  // Two columns: left column takes the first half, right the rest; the taller one sets the height.
+  const split = st.cols === 2 ? Math.ceil(card.features.length / 2) : card.features.length
+  const colHeight = (hs: number[]) => hs.reduce((sum, h) => sum + h + featGap, 0)
+  const hFeatures = Math.max(colHeight(featureHeights.slice(0, split)), colHeight(featureHeights.slice(split)))
+  const total = padY + hEyebrow + hName + hSub + priceRowH + 14 * k + hFeatures + padY - 8 * k
+  if (measureOnly) return total
 
-  // A card that cannot fit in the remaining space starts a fresh page.
-  ensure(doc, Math.min(total, A4_HEIGHT - MARGIN * 2))
+  // No page break here: renderInvestment sizes the cards so they all fit on its page.
   const top = doc.y
   const x = MARGIN + padX
 
@@ -173,12 +194,12 @@ function pricingCard(doc: Doc, card: PricingCard) {
     y += hEyebrow
   }
 
-  doc.font('Helvetica').fontSize(22).fillColor(PALETTE.ink)
+  doc.font('Helvetica').fontSize(nameSize).fillColor(PALETTE.ink)
     .text(card.name, x, y, { width: innerWidth })
   y += hName
 
   if (card.subtitle) {
-    doc.font('Helvetica').fontSize(11).fillColor(PALETTE.accent)
+    doc.font('Helvetica').fontSize(subSize).fillColor(PALETTE.accent)
       .text(card.subtitle, x, y, { width: innerWidth })
   }
   y += hSub
@@ -188,7 +209,7 @@ function pricingCard(doc: Doc, card: PricingCard) {
   doc.save().moveTo(x, ruleTop).lineTo(x + innerWidth, ruleTop)
     .lineWidth(0.75).strokeColor(PALETTE.hairline).stroke().restore()
 
-  const priceY = ruleTop + 14
+  const priceY = ruleTop + 14 * k
   doc.font('Helvetica').fontSize(PRICE_SIZE).fillColor(PALETTE.accent)
     .text(card.price, x, priceY, { lineBreak: false })
   const priceWidth = doc.widthOfString(card.price)
@@ -210,15 +231,20 @@ function pricingCard(doc: Doc, card: PricingCard) {
   doc.save().moveTo(x, ruleBottom).lineTo(x + innerWidth, ruleBottom)
     .lineWidth(0.75).strokeColor(PALETTE.hairline).stroke().restore()
 
-  y = ruleBottom + 14
-  doc.font('Helvetica').fontSize(10)
+  const featTop = ruleBottom + 14 * k
+  doc.font('Helvetica').fontSize(featSize)
+  let fy = featTop
   card.features.forEach((f, i) => {
-    diamond(doc, x + 4, y + 5)
-    doc.fillColor(PALETTE.ink).text(f, x + 14, y, { width: innerWidth - 16, lineGap: 3 })
-    y += featureHeights[i] + 8
+    const colX = i < split ? x : x + colW + colGap
+    if (i === split) fy = featTop
+    diamond(doc, colX + 4, fy + featSize * 0.5, 2.6 * Math.max(k, 0.7))
+    doc.fillColor(PALETTE.ink).text(f, colX + 14, fy, { width: colW - 16, lineGap: 3 * k })
+    fy += featureHeights[i] + featGap
   })
 
+  doc.x = MARGIN
   doc.y = top + total
+  return total
 }
 
 /**
@@ -457,11 +483,35 @@ function renderInvestment(doc: Doc, data: ProposalData) {
     doc.moveDown(1.2)
   }
 
+  // The investment always fits on this one page: use the largest card size
+  // that leaves room for every card, shrinking step by step if it has to.
+  const available = A4_HEIGHT - MARGIN - doc.y
+  const fits = (st: CardStyle) =>
+    data.cards.reduce((sum, c) => sum + pricingCard(doc, c, st, true), 0) + cardGap(st) * Math.max(data.cards.length - 1, 0) <= available
+  let style = CARD_STYLES.find(fits)
+  if (!style) {
+    // Very long card lists: find the largest scale below the presets that fits.
+    let lo = 0.25
+    let hi = CARD_STYLES[CARD_STYLES.length - 1].k
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2
+      if (fits({ k: mid, cols: 2 })) lo = mid
+      else hi = mid
+    }
+    style = { k: lo, cols: 2 }
+  }
+
+  // Never let pdfkit spill a card onto a new page: the page is sized to fit.
+  const bottom = doc.page.margins.bottom
+  doc.page.margins.bottom = 0
   data.cards.forEach((card, i) => {
-    pricingCard(doc, card)
-    if (i < data.cards.length - 1) doc.moveDown(1.4)
+    pricingCard(doc, card, style)
+    if (i < data.cards.length - 1) doc.y += cardGap(style)
   })
+  doc.page.margins.bottom = bottom
 }
+
+const cardGap = (st: CardStyle) => 20 * st.k
 
 function renderTerms(doc: Doc) {
   doc.addPage()
