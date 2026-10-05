@@ -13,6 +13,7 @@ import { FlowTaskRow, PhaseDot, ProgressBar, useToast } from "@/components/flow/
 import TaskDrawer from "@/components/flow/task-drawer";
 import { EditClientModal } from "@/components/flow/client-modals";
 import { MigrationNotice } from "@/components/flow/migration-notice";
+import Milestones from "@/components/flow/milestones";
 
 const fmtCall = (d: string) =>
   new Date(d).toLocaleString("en-ZA", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -189,6 +190,7 @@ export default function FlowClientView({
                 onDelete={() => removeTask(t)}
               />
             ))}
+            {ph.id === "sales" && <Milestones client={client} profiles={profiles} />}
             <AddTask clientId={client.id} phase={ph.id} label={ph.label} defaultAssignee={client.lead_id} />
           </section>
         );

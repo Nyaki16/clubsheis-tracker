@@ -74,3 +74,12 @@ export async function saveDocEdit(clientId: string, kind: "profile" | "strategy"
   if (error) throw new Error(error.message);
   revalidatePath(`/clients/${clientId}`);
 }
+
+/** A task's client gets fresh documents on the next background run (e.g. a Yellow Sheet the team marked as received). */
+export async function queueDocsForTask(taskId: string) {
+  const { supabase } = await me();
+  const { data: task } = await supabase.from("tasks").select("job_id").eq("id", taskId).single();
+  if (!task) return;
+  const { data: job } = await supabase.from("jobs").select("client_id").eq("id", task.job_id).single();
+  if (job?.client_id) await queueRefresh(supabase, job.client_id);
+}

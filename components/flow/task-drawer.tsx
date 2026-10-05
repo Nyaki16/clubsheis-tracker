@@ -15,6 +15,7 @@ import GenTool from "./gen-tool";
 import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
 import { CLIENT_SENDER } from "@/lib/sender";
 import { getBrief } from "@/app/actions/briefs";
+import { queueDocsForTask } from "@/app/actions/client-intel";
 import Markdown from "./markdown";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
@@ -558,7 +559,13 @@ function YellowSheetPanel({ task, clientTasks }: { task: Task; clientTasks: Task
         <button
           disabled={missing.length > 0}
           title={missing.length ? "Fill in the business, offer and brand voice first" : undefined}
-          onClick={() => start(() => updateToolState(task.id, { state: "submitted", submitted_at: new Date().toISOString(), submitted_by: "team" }, "closed_out"))}
+          onClick={() =>
+            start(async () => {
+              await updateToolState(task.id, { state: "submitted", submitted_at: new Date().toISOString(), submitted_by: "team" }, "closed_out");
+              await queueDocsForTask(task.id);
+              toast("Yellow Sheet received. The Client Profile updates within about 10 minutes.");
+            })
+          }
           className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
         >
           Mark as received

@@ -178,7 +178,8 @@ async function write(anthropic: Anthropic, kind: DocKind, context: string, previ
 }
 
 /** Write fresh versions of both documents and clear the "needs update" flag. */
-export async function updateClientDocs(sb: SupabaseClient, clientId: string) {
+/** `trigger` names what prompted this update, e.g. "their Yellow Sheet", for the version note. */
+export async function updateClientDocs(sb: SupabaseClient, clientId: string, trigger?: string) {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY isn't set on the Tracker.");
   const started = new Date().toISOString();
   const [{ context, meetingCount, latestMeeting }, prev] = await Promise.all([gather(sb, clientId), latestDocs(sb, clientId)]);
@@ -187,7 +188,7 @@ export async function updateClientDocs(sb: SupabaseClient, clientId: string) {
     write(anthropic, "profile", context, prev.profile?.content ?? null),
     write(anthropic, "strategy", context, prev.strategy?.content ?? null),
   ]);
-  const sources = `${meetingCount} meeting${meetingCount === 1 ? "" : "s"}${latestMeeting ? ` (latest ${fmtDate(latestMeeting)})` : ""}, team mentions and the work log`;
+  const sources = `${trigger ? `${trigger}, ` : ""}${meetingCount} meeting${meetingCount === 1 ? "" : "s"}${latestMeeting ? ` (latest ${fmtDate(latestMeeting)})` : ""}, team mentions and the work log`;
   const { error } = await sb.from("client_documents").insert([
     { client_id: clientId, kind: "profile", content: profile, sources },
     { client_id: clientId, kind: "strategy", content: strategy, sources },

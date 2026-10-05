@@ -42,7 +42,8 @@ export async function updateSession(request: NextRequest) {
     // Calendar sync from the Apps Script (checks its own shared secret).
     pathname === "/api/calendar/ingest" ||
     pathname === "/api/client-docs/process" ||
-    pathname === "/api/client-docs/written";
+    pathname === "/api/client-docs/written" ||
+    pathname === "/api/ghl/payment";
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

@@ -25,8 +25,7 @@ import {
   User as UserIcon,
   Users,
   UsersRound,
-  X,
-} from "lucide-react";
+  X, KeyRound } from "lucide-react";
 import { useTheme, type Theme } from "@/components/theme";
 import Avatar from "@/components/avatar";
 
@@ -60,6 +59,7 @@ const GROUPS = [
       { href: "/settings/pricing", label: "Pricing", icon: Tag },
       { href: "/settings/calendar", label: "Calendar sync", icon: CalendarDays },
       { href: "/settings/import", label: "Import from Client Flow", icon: Download },
+      { href: "/settings/ghutte", label: "Ghutte", icon: KeyRound },
       { href: "/settings/duplicates", label: "Duplicates", icon: CopyMinus },
     ],
   },

@@ -88,6 +88,16 @@ export type Client = {
   docs_dirty_at: string | null;
   profile_gdoc_id: string | null;
   strategy_gdoc_id: string | null;
+  // Sales milestones + Ghutte automation (0028)
+  proposal_accepted_at?: string | null;
+  proposal_accepted_by?: string | null;
+  ghutte_paid_at?: string | null;
+  ghutte_payment?: Record<string, unknown> | null;
+  ghl_contact_id?: string | null;
+  ghutte_location_id?: string | null;
+  ghutte_user_id?: string | null;
+  ghutte_login_sent_at?: string | null;
+  ghutte_error?: string | null;
   clock_started_on: string | null;
   created_at: string;
 };
