@@ -34,7 +34,7 @@ export default function PricingEditor({ tiers, migrated }: { tiers: PricingTier[
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800">
-              <th className="px-4 py-2.5 font-semibold">Tier</th>
+              <th className="px-4 py-2.5 font-semibold">Tier &amp; what&apos;s included</th>
               <th className="px-4 py-2.5 font-semibold">Price (R)</th>
               <th className="px-4 py-2.5 font-semibold">Billed</th>
               <th className="px-4 py-2.5 font-semibold">Minimum term</th>
@@ -64,7 +64,8 @@ export default function PricingEditor({ tiers, migrated }: { tiers: PricingTier[
 function TierRow({ tier }: { tier: PricingTier }) {
   const [name, setName] = useState(tier.name);
   const [amount, setAmount] = useState(String(tier.amount));
-  useEffect(() => { setName(tier.name); setAmount(String(tier.amount)); }, [tier.name, tier.amount]);
+  const [desc, setDesc] = useState(tier.description ?? "");
+  useEffect(() => { setName(tier.name); setAmount(String(tier.amount)); setDesc(tier.description ?? ""); }, [tier.name, tier.amount, tier.description]);
   const [, start] = useTransition();
   const toast = useToast();
   const save = (u: Parameters<typeof updatePricingTier>[1]) => start(() => updatePricingTier(tier.id, u));
@@ -74,6 +75,14 @@ function TierRow({ tier }: { tier: PricingTier }) {
     <tr className="border-b last:border-0 border-slate-100 dark:border-slate-800">
       <td className="px-4 py-2.5 min-w-[280px]">
         <input aria-label="Tier name" className={`${control} w-full`} value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== tier.name && save({ name })} />
+        <textarea
+          aria-label={`What ${tier.name} includes`}
+          placeholder="What's included. The proposal generator uses this to write the deliverables."
+          className={`${control} w-full mt-1.5 text-xs min-h-[54px]`}
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          onBlur={() => desc !== (tier.description ?? "") && save({ description: desc })}
+        />
       </td>
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">

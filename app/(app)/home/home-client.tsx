@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate } from "@/lib/flow";
+import { PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTaskStatus } from "@/app/actions/tasks";
 import { restoreTask } from "@/app/actions/flow";
@@ -18,6 +18,7 @@ export default function HomeClient({
   clients,
   profiles,
   templates,
+  tiers,
   tasksByClient,
   meId,
   migrated,
@@ -25,6 +26,7 @@ export default function HomeClient({
   clients: Client[];
   profiles: Profile[];
   templates: FlowTemplate[];
+  tiers: PricingTier[];
   tasksByClient: Record<string, Task[]>;
   meId: string | null;
   migrated: boolean;
@@ -200,7 +202,9 @@ export default function HomeClient({
           client={openTask.c}
           clientTasks={tasksByClient[openTask.c.id] ?? []}
           profiles={profiles}
+          tiers={tiers}
           onClose={() => setOpen(null)}
+          onOpenTask={setOpen}
         />
       )}
       {newOpen && (

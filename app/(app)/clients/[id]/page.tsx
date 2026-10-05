@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchClientFlowDocs } from "@/lib/client-flow";
 import type { Client, ClientDate, Job, Profile, Task } from "@/lib/types";
-import type { FlowTemplate } from "@/lib/flow";
+import type { FlowTemplate, PricingTier } from "@/lib/flow";
 import ClientDetail from "./client-detail";
 import FlowClientView from "./flow-client-view";
 
@@ -22,7 +22,7 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [jobsRes, profilesRes, datesRes, templatesRes, clientFlowDocs] = await Promise.all([
+  const [jobsRes, profilesRes, datesRes, templatesRes, tiersRes, clientFlowDocs] = await Promise.all([
     supabase
       .from("jobs")
       .select("*")
@@ -35,6 +35,7 @@ export default async function ClientDetailPage({
       .eq("client_id", id)
       .order("date", { ascending: true }),
     supabase.from("flow_templates").select("*").order("position"),
+    supabase.from("pricing_tiers").select("*").order("position"),
     fetchClientFlowDocs(client.name),
   ]);
 
@@ -59,6 +60,7 @@ export default async function ClientDetailPage({
         tasks={flowTasks}
         profiles={profiles}
         templates={(templatesRes.data ?? []) as FlowTemplate[]}
+        tiers={(tiersRes.data ?? []) as PricingTier[]}
         migrated={!templatesRes.error}
       />
       <section className="flex flex-col gap-3">

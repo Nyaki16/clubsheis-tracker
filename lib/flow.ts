@@ -90,6 +90,7 @@ export type PricingTier = {
   cadence: "month" | "once";
   min_months: number;
   is_from: boolean;
+  description: string;
   position: number;
   created_at: string;
 };

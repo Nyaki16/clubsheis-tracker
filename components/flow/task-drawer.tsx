@@ -4,11 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Sparkles, Trash2, X } from "lucide-react";
 import type { TaskStatusId } from "@/lib/constants";
-import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, packageLabel } from "@/lib/flow";
+import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, packageLabel, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTask } from "@/app/actions/tasks";
 import { restoreTask, updateToolState } from "@/app/actions/flow";
 import { PhaseDot, StatusSelect, useToast } from "./ui";
+import ProposalTool from "./proposal-tool";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5";
@@ -18,13 +19,19 @@ export default function TaskDrawer({
   client,
   clientTasks,
   profiles,
+  tiers,
   onClose,
+  onOpenTask,
+  onEditClient,
 }: {
   task: Task;
   client: Client;
   clientTasks: Task[];
   profiles: Profile[];
+  tiers: PricingTier[];
   onClose: () => void;
+  onOpenTask?: (id: string) => void;
+  onEditClient?: () => void;
 }) {
   const [, startTransition] = useTransition();
   const toast = useToast();
@@ -100,7 +107,7 @@ export default function TaskDrawer({
             </div>
           </div>
 
-          <ToolPanel task={task} client={client} clientTasks={clientTasks} />
+          <ToolPanel task={task} client={client} clientTasks={clientTasks} tiers={tiers} onOpenTask={onOpenTask} onEditClient={onEditClient} />
 
           <div>
             <label className={label} htmlFor="t-notes">Notes</label>
@@ -196,7 +203,21 @@ function InputChips({ task, clientTasks }: { task: Task; clientTasks: Task[] }) 
   );
 }
 
-function ToolPanel({ task, client, clientTasks }: { task: Task; client: Client; clientTasks: Task[] }) {
+function ToolPanel({
+  task,
+  client,
+  clientTasks,
+  tiers,
+  onOpenTask,
+  onEditClient,
+}: {
+  task: Task;
+  client: Client;
+  clientTasks: Task[];
+  tiers: PricingTier[];
+  onOpenTask?: (id: string) => void;
+  onEditClient?: () => void;
+}) {
   const [, start] = useTransition();
   const toast = useToast();
   const need = useToolField(task, "need");
@@ -249,7 +270,7 @@ function ToolPanel({ task, client, clientTasks }: { task: Task; client: Client; 
               </select>
             </div>
           </div>
-          <Soon>Generating the proposal from these notes switches on in the next update.</Soon>
+          <DiscoveryNext task={task} client={client} clientTasks={clientTasks} onOpenTask={onOpenTask} />
         </ToolBox>
       );
 
@@ -323,10 +344,8 @@ function ToolPanel({ task, client, clientTasks }: { task: Task; client: Client; 
 
     case "proposal":
       return (
-        <ToolBox title="Proposal PDF + email">
-          <Soon>
-            The proposal generator arrives in the next update. It reads the discovery notes, picks tiers from your <Link className="underline" href="/settings/pricing">Pricing</Link> page, builds the 8-page PDF and sends it to {client.email ?? "the client's email"}.
-          </Soon>
+        <ToolBox title="Proposal PDF + email" right="Claude · Gmail">
+          <ProposalTool task={task} client={client} clientTasks={clientTasks} tiers={tiers} onEditClient={onEditClient} />
         </ToolBox>
       );
 
@@ -348,4 +367,107 @@ function ToolPanel({ task, client, clientTasks }: { task: Task; client: Client; 
     default:
       return null;
   }
+}
+
+// What happens after the call, by lead status.
+function DiscoveryNext({
+  task,
+  client,
+  clientTasks,
+  onOpenTask,
+}: {
+  task: Task;
+  client: Client;
+  clientTasks: Task[];
+  onOpenTask?: (id: string) => void;
+}) {
+  const ts = task.tool_state ?? {};
+  const lead = String(ts.lead ?? "");
+  const proposal = clientTasks.find((t) => t.tool === "proposal");
+  const hasNotes = !!(ts.need || ts.transcript);
+  const [, start] = useTransition();
+  const toast = useToast();
+  const first = client.name.split(" ")[0];
+  const [thanks, setThanks] = useState(
+    String(
+      ts.thanks ??
+        `Hi ${first},\n\nThank you for taking the time to chat with us. Right now we're not the best fit for what you need, and we'd rather tell you that honestly than sell you something that won't serve you. If things change, our door is always open.\n\nWarm regards,\nNyaki & Kopano — ClubSheIs`
+    )
+  );
+  const [to, setTo] = useState(client.email ?? "");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState("");
+
+  if (lead === "Good fit" && proposal) {
+    const drafted = !!(proposal.tool_state as Record<string, unknown>)?.data;
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {drafted && <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">✓ Proposal drafted</span>}
+        <button
+          disabled={!hasNotes}
+          onClick={() => onOpenTask?.(proposal.id)}
+          className="text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+        >
+          {drafted ? "Open proposal" : "Write the proposal from these notes"}
+        </button>
+        {!hasNotes && <span className="text-xs text-slate-400">Add what they need or the call notes first.</span>}
+      </div>
+    );
+  }
+
+  if (lead === "Follow up") {
+    const when = new Date(Date.now() + 14 * 864e5);
+    const day = when.toISOString().slice(0, 10).replace(/-/g, "");
+    const url =
+      "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+      `&text=${encodeURIComponent(`Follow up: ${client.name}`)}` +
+      `&dates=${day}T080000Z/${day}T083000Z` +
+      `&details=${encodeURIComponent(`Follow up on the discovery call with ${client.name}${client.business_name ? ` (${client.business_name})` : ""}.`)}`;
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="self-start text-sm font-medium border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800">
+        Add a follow-up to Google Calendar (14 days)
+      </a>
+    );
+  }
+
+  if (lead === "Not a fit") {
+    if (ts.thanks_sent_at) {
+      return <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">✓ Thank-you email sent</p>;
+    }
+    return (
+      <div className="flex flex-col gap-2">
+        <label className={label} htmlFor="d-thanks">Thank-you email</label>
+        <input className={field} type="email" aria-label="Send to" placeholder="Client's email" value={to} onChange={(e) => setTo(e.target.value)} />
+        <textarea id="d-thanks" className={`${field} min-h-[140px]`} value={thanks} onChange={(e) => setThanks(e.target.value)} />
+        <button
+          disabled={sending || !to.trim()}
+          onClick={async () => {
+            setSending(true);
+            setErr("");
+            try {
+              const res = await fetch("/api/email/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ to, subject: "Thank you from ClubSheIs", body: thanks }),
+              });
+              const j = await res.json();
+              if (!res.ok) throw new Error(j.error || "Couldn't send.");
+              start(() => updateToolState(task.id, { thanks, thanks_sent_at: new Date().toISOString() }, "closed_out"));
+              toast("Thank-you email sent");
+            } catch (e) {
+              setErr(e instanceof Error ? e.message : "Couldn't send.");
+            } finally {
+              setSending(false);
+            }
+          }}
+          className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+        >
+          {sending ? "Sending…" : "Send thank-you"}
+        </button>
+        {err && <p className="text-sm text-rose-600">{err}</p>}
+      </div>
+    );
+  }
+
+  return null;
 }

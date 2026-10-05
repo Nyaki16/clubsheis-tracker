@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { CalendarDays, FolderOpen, Pencil } from "lucide-react";
-import { PACKAGES, PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId, type PhaseId } from "@/lib/flow";
+import { PACKAGES, PHASES, currentPhase, isDone, packageLabel, sortFlowTasks, type FlowTemplate, type PackageId, type PhaseId, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTaskStatus } from "@/app/actions/tasks";
 import { addFlowTask, restoreTask, startFlow } from "@/app/actions/flow";
@@ -21,12 +21,14 @@ export default function FlowClientView({
   tasks,
   profiles,
   templates,
+  tiers,
   migrated,
 }: {
   client: Client;
   tasks: Task[];
   profiles: Profile[];
   templates: FlowTemplate[];
+  tiers: PricingTier[];
   migrated: boolean;
 }) {
   const toast = useToast();
@@ -188,7 +190,16 @@ export default function FlowClientView({
       })}
 
       {openTask && (
-        <TaskDrawer task={openTask} client={client} clientTasks={tasks} profiles={profiles} onClose={() => setOpen(null)} />
+        <TaskDrawer
+          task={openTask}
+          client={client}
+          clientTasks={tasks}
+          profiles={profiles}
+          tiers={tiers}
+          onClose={() => setOpen(null)}
+          onOpenTask={setOpen}
+          onEditClient={() => { setOpen(null); setEditing(true); }}
+        />
       )}
       {editing && (
         <EditClientModal client={client} tasks={tasks} templates={templates} profiles={profiles} onClose={() => setEditing(false)} />

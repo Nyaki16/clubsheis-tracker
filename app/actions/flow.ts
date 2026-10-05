@@ -327,7 +327,7 @@ export async function addPricingTier() {
 
 export async function updatePricingTier(
   id: string,
-  input: { name?: string; amount?: number; cadence?: "month" | "once"; min_months?: number; is_from?: boolean }
+  input: { name?: string; amount?: number; cadence?: "month" | "once"; min_months?: number; is_from?: boolean; description?: string }
 ) {
   const supabase = await createClient();
   const payload: Record<string, unknown> = { ...input };

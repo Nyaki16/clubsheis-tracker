@@ -34,7 +34,11 @@ export async function updateSession(request: NextRequest) {
     pathname === "/login" ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon");
+    pathname.startsWith("/favicon") ||
+    // Open-tracking pixel in proposal emails, and the Yellow Sheet clients fill in.
+    pathname.startsWith("/api/track/") ||
+    pathname.startsWith("/yellow-sheet/") ||
+    pathname.startsWith("/api/yellow-sheet/");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
