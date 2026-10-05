@@ -545,9 +545,13 @@ function YellowSheetPanel({ task, clientTasks }: { task: Task; clientTasks: Task
         YS_SECTIONS.map((sec) => (
           <div key={sec.title} className="flex flex-col gap-2.5">
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{sec.title}</p>
-            {sec.fields.map((f) => (
-              <YsField key={f.key} task={task} k={f.key} labelText={f.label} placeholder={f.placeholder} rows={f.rows} />
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {sec.fields.map((f) => (
+                <div key={f.key} className={f.half ? "" : "sm:col-span-2"}>
+                  <YsField task={task} k={f.key} labelText={f.label} placeholder={f.placeholder} rows={f.rows} />
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       {!submitted && (

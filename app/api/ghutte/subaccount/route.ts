@@ -23,22 +23,30 @@ export async function POST(req: Request) {
   const { client, task } = ctx;
   if (task.tool_state?.location_id) return Response.json({ error: "This client already has a sub-account." }, { status: 409 });
 
-  const name = client.business_name || client.name;
+  // The Yellow Sheet's "Your details" fill the business profile when the client
+  // has sent it; otherwise the client record, with Johannesburg defaults.
+  const ys = (ctx.siblings.find((t) => t.tool === "yellow")?.tool_state ?? {}) as Record<string, string>;
+  const v = (k: string) => (typeof ys[k] === "string" ? ys[k].trim() : "");
+  const name = v("business_name") || client.business_name || client.name;
+  const country = v("country");
   const res = await fetch(`${GHL_API}/locations/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, Version: "2021-07-28" },
     body: JSON.stringify({
       companyId,
       name,
-      email: client.email || "info@clubsheis.com",
-      phone: client.phone || "",
-      website: client.website_url || "",
-      address: "",
-      city: "Johannesburg",
-      state: "Gauteng",
-      country: "ZA",
-      postalCode: "2000",
+      email: v("email") || client.email || "info@clubsheis.com",
+      phone: v("phone") || client.phone || "",
+      website: v("website") || client.website_url || "",
+      address: v("address"),
+      city: v("city") || "Johannesburg",
+      state: v("state") || "Gauteng",
+      country: !country || /south africa|^za$|^rsa$/i.test(country) ? "ZA" : country,
+      postalCode: v("postal_code") || "2000",
       timezone: "Africa/Johannesburg",
+      ...(v("first_name") || v("last_name")
+        ? { prospectInfo: { firstName: v("first_name"), lastName: v("last_name"), email: v("email") || client.email || "" } }
+        : {}),
     }),
   });
   const text = await res.text();

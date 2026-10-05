@@ -2,13 +2,43 @@
 // their business, their offer and their brand voice. Shared by the public
 // form, the task panel and the copy generators.
 
-export type YsField = { key: string; label: string; placeholder: string; rows: number };
+export type YsField = {
+  key: string;
+  label: string;
+  placeholder: string;
+  rows: number;
+  /** Input type for one-line fields. */
+  type?: "text" | "email" | "tel" | "url";
+  /** Sits next to another half-width field on wider screens. */
+  half?: boolean;
+  required?: boolean;
+  /** Small print under the field. */
+  hint?: string;
+  /** Pre-filled when empty. */
+  initial?: string;
+};
 
 export const YS_SECTIONS: { title: string; fields: YsField[] }[] = [
   {
+    title: "Your details",
+    fields: [
+      { key: "first_name", label: "First name", placeholder: "Your first name", rows: 1, half: true },
+      { key: "last_name", label: "Last name", placeholder: "Your last name", rows: 1, half: true },
+      { key: "phone", label: "Phone", placeholder: "e.g. 082 123 4567", rows: 1, type: "tel", half: true, required: true },
+      { key: "email", label: "Business email", placeholder: "you@yourbusiness.co.za", rows: 1, type: "email", half: true, required: true },
+      { key: "address", label: "Street address", placeholder: "e.g. 12 Jan Smuts Avenue, Rosebank", rows: 1 },
+      { key: "city", label: "City", placeholder: "e.g. Johannesburg", rows: 1, half: true },
+      { key: "state", label: "Province", placeholder: "e.g. Gauteng", rows: 1, half: true },
+      { key: "country", label: "Country", placeholder: "e.g. South Africa", rows: 1, half: true, initial: "South Africa" },
+      { key: "postal_code", label: "Postal code", placeholder: "e.g. 2196", rows: 1, half: true },
+    ],
+  },
+  {
     title: "Your business",
     fields: [
-      { key: "business_name", label: "Business name", placeholder: "e.g. Glow Studio", rows: 1 },
+      { key: "company_name", label: "Company name", placeholder: "Your registered company name", rows: 1, hint: "The legal registered name, as on your CIPC documents." },
+      { key: "business_name", label: "Business trading name", placeholder: "The name your clients know, e.g. Glow Studio", rows: 1, half: true },
+      { key: "website", label: "Website", placeholder: "https://yourwebsite.co.za", rows: 1, type: "url", half: true },
       { key: "business", label: "What your business does and who you serve", placeholder: "In a few sentences: what you do, for whom, and where.", rows: 3 },
       { key: "story", label: "Your story", placeholder: "Why you started, what you've been through, what you believe.", rows: 4 },
     ],

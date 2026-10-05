@@ -16,6 +16,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ taskId:
     const v = body[f.key];
     if (typeof v === "string") answers[f.key] = v.slice(0, 8000);
   }
+  if (!answers.phone?.trim() || !answers.email?.trim()) {
+    return Response.json({ error: "Please add your phone number and business email before sending." }, { status: 400 });
+  }
   if (!answers.business?.trim() || !answers.offer?.trim()) {
     return Response.json({ error: "Please tell us about your business and your offer before sending." }, { status: 400 });
   }

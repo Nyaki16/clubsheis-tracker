@@ -6,6 +6,21 @@ import { YS_SECTIONS, type YsKey } from "@/lib/yellow-sheet";
 // ClubSheIs brand on the client-facing form (same burgundy as the proposal PDF).
 const ACCENT = "#70262D";
 
+// Let the browser fill in contact details.
+const AUTOCOMPLETE: Record<string, string> = {
+  first_name: "given-name",
+  last_name: "family-name",
+  phone: "tel",
+  email: "email",
+  address: "street-address",
+  city: "address-level2",
+  state: "address-level1",
+  country: "country-name",
+  postal_code: "postal-code",
+  company_name: "organization",
+  website: "url",
+};
+
 export default function YellowSheetForm({
   taskId,
   firstName,
@@ -18,7 +33,7 @@ export default function YellowSheetForm({
   submittedAt: string | null;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(YS_SECTIONS.flatMap((s) => s.fields).map((f) => [f.key, initial[f.key] ?? ""]))
+    Object.fromEntries(YS_SECTIONS.flatMap((s) => s.fields).map((f) => [f.key, initial[f.key] || f.initial || ""]))
   );
   const [state, setState] = useState<"idle" | "sending" | "done">(submittedAt ? "done" : "idle");
   const [error, setError] = useState("");
@@ -82,6 +97,7 @@ export default function YellowSheetForm({
                   </span>
                   {section.title}
                 </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {section.fields.map((f) => {
                   const id = `ys-${f.key}`;
                   const common = {
@@ -94,14 +110,21 @@ export default function YellowSheetForm({
                       "w-full rounded-lg border border-[#E5DEDE] dark:border-stone-700 bg-[#FCFBFA] dark:bg-stone-950 px-3.5 py-2.5 text-base outline-none focus:border-[#70262D] focus:ring-2 focus:ring-[#70262D]/15",
                   };
                   return (
-                    <div key={f.key} className="flex flex-col gap-1.5">
+                    <div key={f.key} className={`flex flex-col gap-1.5 ${f.half ? "" : "sm:col-span-2"}`}>
                       <label htmlFor={id} className="text-sm font-medium">
                         {f.label}
+                        {f.required && <span style={{ color: ACCENT }}> *</span>}
                       </label>
-                      {f.rows === 1 ? <input {...common} /> : <textarea {...common} rows={f.rows} />}
+                      {f.rows === 1 ? (
+                        <input {...common} type={f.type ?? "text"} required={f.required} autoComplete={AUTOCOMPLETE[f.key]} />
+                      ) : (
+                        <textarea {...common} rows={f.rows} required={f.required} />
+                      )}
+                      {f.hint && <p className="text-xs text-[#685B5A] dark:text-stone-500">{f.hint}</p>}
                     </div>
                   );
                 })}
+                </div>
               </section>
             ))}
             {error && <p className="text-sm text-rose-700 dark:text-rose-400">{error}</p>}
