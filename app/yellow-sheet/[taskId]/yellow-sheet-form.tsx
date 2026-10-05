@@ -135,7 +135,9 @@ export default function YellowSheetForm({
                         <textarea {...common} rows={f.rows} required={f.required} />
                       )}
                       {f.hint && <p className="text-xs text-[#685B5A] dark:text-stone-500">{f.hint}</p>}
-                      {f.minWords && <WordCount words={countWords(values[f.key] ?? "")} min={f.minWords} target={f.targetWords ?? f.minWords} />}
+                      {(f.minWords || f.targetWords) && (
+                        <WordCount words={countWords(values[f.key] ?? "")} min={f.minWords ?? 0} target={f.targetWords ?? f.minWords ?? 0} />
+                      )}
                     </div>
                   );
                 })}
@@ -162,8 +164,15 @@ export default function YellowSheetForm({
 
 function WordCount({ words, min, target }: { words: number; min: number; target: number }) {
   const tone = words >= target ? "text-emerald-700 dark:text-emerald-400" : words >= min ? "text-[#685B5A] dark:text-stone-400" : "text-[#70262D] dark:text-rose-300";
+  if (!words && !min) return <p className="text-xs text-[#685B5A] dark:text-stone-500">Optional, but aim for {target}+ words.</p>;
   const note =
-    words >= target ? "Great, that's plenty to work with." : words >= min ? `Good. Aim for ${target}+ words if you can.` : `At least ${min} words, ideally ${target}+.`;
+    words >= target
+      ? "Great, that's plenty to work with."
+      : words >= min
+      ? min
+        ? `Good. Aim for ${target}+ words if you can.`
+        : `Aim for ${target}+ words.`
+      : `At least ${min} words, ideally ${target}+.`;
   return (
     <p className={`text-xs tabular-nums ${tone}`}>
       {words} words · {note}
