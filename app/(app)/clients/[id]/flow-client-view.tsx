@@ -35,6 +35,7 @@ export default function FlowClientView({
   const [, start] = useTransition();
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [nowMs] = useState(() => Date.now());
 
   const sorted = sortFlowTasks(tasks);
   const done = tasks.filter(isDone).length;
@@ -44,7 +45,7 @@ export default function FlowClientView({
   const owner = (id: string | null) => profiles.find((p) => p.id === id);
   const callUpcoming = client.call_at && new Date(client.call_at) > new Date();
   const clockDay = client.clock_started_on
-    ? Math.min(14, Math.round((Date.now() - new Date(client.clock_started_on).getTime()) / 864e5) + 1)
+    ? Math.min(14, Math.round((nowMs - new Date(client.clock_started_on).getTime()) / 864e5) + 1)
     : null;
   const openTask = tasks.find((t) => t.id === open);
 

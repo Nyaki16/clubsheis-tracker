@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Sparkles, Trash2, X } from "lucide-react";
 import type { TaskStatusId } from "@/lib/constants";
-import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, packageLabel, type PricingTier } from "@/lib/flow";
+import { PHASES, TECH_CHECKS, TOOL_INPUTS, isDone, type PricingTier } from "@/lib/flow";
 import type { Client, Profile, Task } from "@/lib/types";
 import { deleteTask, updateTask } from "@/app/actions/tasks";
 import { restoreTask, updateToolState } from "@/app/actions/flow";
 import { PhaseDot, StatusSelect, useToast } from "./ui";
 import ProposalTool from "./proposal-tool";
+import GenTool from "./gen-tool";
+import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
 const label = "block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5";
@@ -37,7 +40,11 @@ export default function TaskDrawer({
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const [notes, setNotes] = useState(task.notes);
-  useEffect(() => setNotes(task.notes), [task.id, task.notes]);
+  const [notesFrom, setNotesFrom] = useState(task.notes);
+  if (task.notes !== notesFrom) {
+    setNotesFrom(task.notes);
+    setNotes(task.notes);
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -164,43 +171,19 @@ function ToolBox({ title, right, children }: { title: string; right?: string; ch
   );
 }
 
-function Soon({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-md px-3 py-2">{children}</p>;
-}
-
 function useToolField(task: Task, key: string) {
-  const [v, setV] = useState(String(task.tool_state?.[key] ?? ""));
-  useEffect(() => setV(String(task.tool_state?.[key] ?? "")), [task.id, task.tool_state, key]);
+  const stored = String(task.tool_state?.[key] ?? "");
+  const [v, setV] = useState(stored);
+  const [from, setFrom] = useState(stored);
+  if (stored !== from) {
+    setFrom(stored);
+    setV(stored);
+  }
   const [, start] = useTransition();
   const commit = () => {
     if (v !== String(task.tool_state?.[key] ?? "")) start(() => updateToolState(task.id, { [key]: v }));
   };
   return { value: v, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV(e.target.value), onBlur: commit };
-}
-
-function InputChips({ task, clientTasks }: { task: Task; clientTasks: Task[] }) {
-  const needs = (TOOL_INPUTS[task.title] ?? ["Yellow Sheet"])
-    .map((n) => ({ n, src: clientTasks.find((t) => t.title === n) }))
-    .filter((x) => x.src);
-  if (!needs.length) return null;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-xs text-slate-500">Uses as input:</p>
-      <div className="flex flex-wrap gap-1.5">
-        {needs.map(({ n, src }) => {
-          const ok = src && (isDone(src) || src.tool_state?.state === "approved" || src.tool_state?.state === "submitted");
-          return (
-            <span
-              key={n}
-              className={`text-xs px-2 py-0.5 rounded-full ${ok ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "border border-dashed border-slate-300 dark:border-slate-600 text-slate-400"}`}
-            >
-              {ok ? "✓" : "○"} {n}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 function ToolPanel({
@@ -223,9 +206,6 @@ function ToolPanel({
   const need = useToolField(task, "need");
   const transcript = useToolField(task, "transcript");
   const link = useToolField(task, "link");
-  const offer = useToolField(task, "offer");
-  const business = useToolField(task, "business");
-  const voice = useToolField(task, "voice");
 
   switch (task.tool) {
     case "discovery":
@@ -305,42 +285,12 @@ function ToolPanel({
       );
     }
 
-    case "yellow": {
-      const submitted = task.tool_state?.state === "submitted";
-      const feeds = clientTasks.filter((t) => (TOOL_INPUTS[t.title] ?? []).includes("Yellow Sheet"));
+    case "yellow":
       return (
-        <ToolBox title="Yellow Sheet" right={submitted ? "Received" : "Waiting on client"}>
-          <p className="text-xs text-slate-500">
-            The client fills this in once they&apos;ve paid for Ghutte. A link to send them arrives in the next update. For now, paste their answers below.
-          </p>
-          <div>
-            <label className={label} htmlFor="y-offer">Their offer</label>
-            <textarea id="y-offer" className={`${field} min-h-[70px]`} placeholder="What they sell, price, what's included" {...offer} />
-          </div>
-          <div>
-            <label className={label} htmlFor="y-business">Their business</label>
-            <textarea id="y-business" className={`${field} min-h-[70px]`} placeholder="Who they are, who they serve, their story" {...business} />
-          </div>
-          <div>
-            <label className={label} htmlFor="y-voice">Brand voice</label>
-            <textarea id="y-voice" className={`${field} min-h-[70px]`} placeholder="How they sound, words they use and avoid" {...voice} />
-          </div>
-          {submitted ? (
-            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-              ✓ Yellow Sheet in. Feeds {feeds.length} task{feeds.length === 1 ? "" : "s"}: {feeds.map((t) => t.title).join(", ")}
-            </p>
-          ) : (
-            <button
-              disabled={!offer.value.trim()}
-              onClick={() => start(() => updateToolState(task.id, { state: "submitted", offer: offer.value, business: business.value, voice: voice.value }, "closed_out"))}
-              className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
-            >
-              Mark as received
-            </button>
-          )}
+        <ToolBox title="Yellow Sheet" right={task.tool_state?.state === "submitted" ? "Received" : "Waiting on client"}>
+          <YellowSheetPanel task={task} clientTasks={clientTasks} />
         </ToolBox>
       );
-    }
 
     case "proposal":
       return (
@@ -352,15 +302,14 @@ function ToolPanel({
     case "account":
       return (
         <ToolBox title="Ghutte setup">
-          <Soon>Creating the Ghutte sub-account from here arrives in the next update. Until then, create it in Ghutte and close this task.</Soon>
+          <GhutteAccount task={task} client={client} />
         </ToolBox>
       );
 
     case "gen":
       return (
         <ToolBox title="AI generator" right="Claude">
-          <InputChips task={task} clientTasks={clientTasks} />
-          <Soon>Generating {task.title.toLowerCase()} for {client.business_name || client.name} ({packageLabel(client.package)}) switches on in the next update.</Soon>
+          <GenTool task={task} client={client} clientTasks={clientTasks} />
         </ToolBox>
       );
 
@@ -397,6 +346,7 @@ function DiscoveryNext({
   const [to, setTo] = useState(client.email ?? "");
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
+  const [now] = useState(() => Date.now());
 
   if (lead === "Good fit" && proposal) {
     const drafted = !!(proposal.tool_state as Record<string, unknown>)?.data;
@@ -416,7 +366,7 @@ function DiscoveryNext({
   }
 
   if (lead === "Follow up") {
-    const when = new Date(Date.now() + 14 * 864e5);
+    const when = new Date(now + 14 * 864e5);
     const day = when.toISOString().slice(0, 10).replace(/-/g, "");
     const url =
       "https://calendar.google.com/calendar/render?action=TEMPLATE" +
@@ -470,4 +420,133 @@ function DiscoveryNext({
   }
 
   return null;
+}
+
+const PUBLIC_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://clubsheis-tracker.vercel.app").replace(/\/$/, "");
+
+function YsField({ task, k, labelText, placeholder, rows }: { task: Task; k: string; labelText: string; placeholder: string; rows: number }) {
+  const f = useToolField(task, k);
+  return (
+    <div>
+      <label className={label} htmlFor={`y-${k}`}>{labelText}</label>
+      {rows === 1 ? (
+        <input id={`y-${k}`} className={field} placeholder={placeholder} {...f} />
+      ) : (
+        <textarea id={`y-${k}`} className={`${field} min-h-[60px]`} rows={rows} placeholder={placeholder} {...f} />
+      )}
+    </div>
+  );
+}
+
+function YellowSheetPanel({ task, clientTasks }: { task: Task; clientTasks: Task[] }) {
+  const [, start] = useTransition();
+  const toast = useToast();
+  const ts = task.tool_state ?? {};
+  const submitted = ts.state === "submitted";
+  const link = `${PUBLIC_URL}/yellow-sheet/${task.id}`;
+  const feeds = clientTasks.filter((t) => (TOOL_INPUTS[t.title] ?? []).includes("Yellow Sheet"));
+  const [open, setOpen] = useState(!submitted);
+  const missing = YS_REQUIRED.filter((k) => !String(ts[k] ?? "").trim());
+
+  return (
+    <>
+      <p className="text-xs text-slate-500">
+        Send the client this link once they&apos;ve paid for Ghutte. Their answers land here, and the team can fill in or edit anything below.
+      </p>
+      <div className="flex gap-2">
+        <input readOnly aria-label="Yellow Sheet link" value={link} className={`${field} font-mono text-xs`} onFocus={(e) => e.target.select()} />
+        <button
+          className="text-sm font-medium border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md whitespace-nowrap"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(link);
+              toast("Link copied");
+            } catch {
+              toast("Select the link and copy it");
+            }
+          }}
+        >
+          Copy link
+        </button>
+      </div>
+      {submitted && (
+        <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+          ✓ {ts.submitted_by === "client" ? "Submitted by the client" : "Received"}
+          {ts.submitted_at ? ` on ${new Date(String(ts.submitted_at)).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}. Feeds{" "}
+          {feeds.map((t) => t.title).join(", ") || "the copy tasks"}.
+        </p>
+      )}
+      <button className="self-start text-xs font-medium underline" onClick={() => setOpen((v) => !v)}>
+        {open ? "Hide answers" : "Show answers"}
+      </button>
+      {open &&
+        YS_SECTIONS.map((sec) => (
+          <div key={sec.title} className="flex flex-col gap-2.5">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{sec.title}</p>
+            {sec.fields.map((f) => (
+              <YsField key={f.key} task={task} k={f.key} labelText={f.label} placeholder={f.placeholder} rows={f.rows} />
+            ))}
+          </div>
+        ))}
+      {!submitted && (
+        <button
+          disabled={missing.length > 0}
+          title={missing.length ? "Fill in the business, offer and brand voice first" : undefined}
+          onClick={() => start(() => updateToolState(task.id, { state: "submitted", submitted_at: new Date().toISOString(), submitted_by: "team" }, "closed_out"))}
+          className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+        >
+          Mark as received
+        </button>
+      )}
+    </>
+  );
+}
+
+function GhutteAccount({ task, client }: { task: Task; client: Client }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const ts = task.tool_state ?? {};
+  if (ts.location_id) {
+    return (
+      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+        ✓ Sub-account “{String(ts.name ?? client.business_name ?? client.name)}” created ·{" "}
+        <a className="underline" href={String(ts.url)} target="_blank" rel="noopener noreferrer">Open in Ghutte</a>
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="text-xs text-slate-500">
+        Creates a Ghutte sub-account called “{client.business_name || client.name}” under the agency, using the client&apos;s email, phone and website.
+      </p>
+      <button
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setErr("");
+          try {
+            const res = await fetch("/api/ghutte/subaccount", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ taskId: task.id }),
+            });
+            const j = await res.json();
+            if (!res.ok) throw new Error(j.error || "Couldn't create the sub-account.");
+            toast("Ghutte sub-account created");
+            router.refresh();
+          } catch (e) {
+            setErr(e instanceof Error ? e.message : "Couldn't create the sub-account.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+      >
+        {busy ? "Creating…" : "Create Ghutte sub-account"}
+      </button>
+      {err && <p className="text-sm text-rose-600">{err}</p>}
+    </>
+  );
 }

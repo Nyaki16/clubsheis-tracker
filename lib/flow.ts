@@ -60,12 +60,12 @@ export const TECH_CHECKS = [
 export const TOOL_INPUTS: Record<string, string[]> = {
   "Sales page copy": ["Yellow Sheet"],
   "7-email sequence": ["Yellow Sheet", "Sales page copy"],
-  "1 month of content": ["Yellow Sheet"],
+  "1 month of content": ["Yellow Sheet", "Sales page copy"],
   "Ad copy": ["Yellow Sheet", "Sales page copy"],
   "Email newsletters": ["Yellow Sheet", "7-email sequence"],
   "Content plan + scripts": ["Yellow Sheet", "1 month of content"],
   "Pre-production prompts": ["Yellow Sheet", "Sales page copy"],
-  "Internal check": ["Sales page copy"],
+  "Internal check": ["Sales page copy", "7-email sequence"],
   "Hand over": [],
 };
 

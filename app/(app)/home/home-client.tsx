@@ -215,6 +215,7 @@ export default function HomeClient({
 }
 
 function ClientCard({ client, tasks, owner }: { client: Client; tasks: Task[]; owner: (id: string | null) => Profile | undefined }) {
+  const [now] = useState(() => Date.now());
   const done = tasks.filter(isDone).length;
   const next = sortFlowTasks(tasks).find((t) => !isDone(t));
   const due = next ? dueInfo(next.due_date) : null;
@@ -253,7 +254,7 @@ function ClientCard({ client, tasks, owner }: { client: Client; tasks: Task[]; o
         {due && <span className={`text-[11px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 ${due.tone}`}>{due.label === "Today" ? "Due today" : due.label}</span>}
         {client.clock_started_on && (
           <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300 tabular-nums">
-            Day {Math.min(14, Math.round((Date.now() - new Date(client.clock_started_on).getTime()) / 864e5) + 1)}/14
+            Day {Math.min(14, Math.round((now - new Date(client.clock_started_on).getTime()) / 864e5) + 1)}/14
           </span>
         )}
         {callUpcoming && (

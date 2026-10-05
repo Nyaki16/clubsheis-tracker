@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { tierCard, type PricingTier } from "@/lib/flow";
 import { addPricingTier, deletePricingTier, updatePricingTier } from "@/app/actions/flow";
@@ -65,7 +65,14 @@ function TierRow({ tier }: { tier: PricingTier }) {
   const [name, setName] = useState(tier.name);
   const [amount, setAmount] = useState(String(tier.amount));
   const [desc, setDesc] = useState(tier.description ?? "");
-  useEffect(() => { setName(tier.name); setAmount(String(tier.amount)); setDesc(tier.description ?? ""); }, [tier.name, tier.amount, tier.description]);
+  const stored = `${tier.name}\u0000${tier.amount}\u0000${tier.description ?? ""}`;
+  const [from, setFrom] = useState(stored);
+  if (stored !== from) {
+    setFrom(stored);
+    setName(tier.name);
+    setAmount(String(tier.amount));
+    setDesc(tier.description ?? "");
+  }
   const [, start] = useTransition();
   const toast = useToast();
   const save = (u: Parameters<typeof updatePricingTier>[1]) => start(() => updatePricingTier(tier.id, u));

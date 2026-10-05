@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   CalendarDays,
@@ -67,7 +67,12 @@ export default function Nav({
   const [mobileOpen, setMobileOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  useEffect(() => setMobileOpen(false), [pathname]);
+  // Close the phone menu after navigating.
+  const [navFrom, setNavFrom] = useState(pathname);
+  if (pathname !== navFrom) {
+    setNavFrom(pathname);
+    setMobileOpen(false);
+  }
 
   async function signOut() {
     const supabase = createClient();

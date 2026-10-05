@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { PACKAGES, PHASES, TOOLS, type FlowTemplate, type PackageId, type PhaseId } from "@/lib/flow";
 import type { Profile } from "@/lib/types";
@@ -71,7 +71,11 @@ export default function TemplatesEditor({
 
 function TemplateRow({ row, first, last, profiles }: { row: FlowTemplate; first: boolean; last: boolean; profiles: Profile[] }) {
   const [title, setTitle] = useState(row.title);
-  useEffect(() => setTitle(row.title), [row.title]);
+  const [from, setFrom] = useState(row.title);
+  if (row.title !== from) {
+    setFrom(row.title);
+    setTitle(row.title);
+  }
   const [, start] = useTransition();
   const toast = useToast();
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, FileText, Plus, X } from "lucide-react";
 import { tierCard, type PricingTier } from "@/lib/flow";
@@ -79,7 +79,11 @@ export default function ProposalTool({
   const [chars, setChars] = useState(0);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(ts.state !== "sent");
-  useEffect(() => setEditing(ts.state !== "sent"), [ts.state]);
+  const [stateFrom, setStateFrom] = useState(ts.state);
+  if (ts.state !== stateFrom) {
+    setStateFrom(ts.state);
+    setEditing(ts.state !== "sent");
+  }
 
   async function generate() {
     setBusy(true);
