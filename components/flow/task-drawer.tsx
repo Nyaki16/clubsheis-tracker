@@ -16,6 +16,8 @@ import { YS_REQUIRED, YS_SECTIONS } from "@/lib/yellow-sheet";
 import { CLIENT_SENDER } from "@/lib/sender";
 import { getBrief } from "@/app/actions/briefs";
 import { queueDocsForTask } from "@/app/actions/client-intel";
+import { linkGhutteSubAccount, listGhutteSubAccounts } from "@/app/actions/ghutte";
+import type { SubAccount } from "@/lib/ghutte";
 import Markdown from "./markdown";
 
 const field = "w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-md px-2.5 py-1.5 text-sm";
@@ -365,7 +367,7 @@ function ToolPanel({
     case "account":
       return (
         <ToolBox title="Ghutte setup">
-          <GhutteAccount task={task} client={client} />
+          <GhutteAccount task={task} client={client} clientTasks={clientTasks} />
         </ToolBox>
       );
 
@@ -575,51 +577,155 @@ function YellowSheetPanel({ task, clientTasks }: { task: Task; clientTasks: Task
   );
 }
 
-function GhutteAccount({ task, client }: { task: Task; client: Client }) {
-  const router = useRouter();
+function CopyRow({ label: name, value }: { label: string; value: string }) {
   const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const ts = task.tool_state ?? {};
-  if (ts.location_id) {
-    return (
-      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-        ✓ Sub-account “{String(ts.name ?? client.business_name ?? client.name)}” created ·{" "}
-        <a className="underline" href={String(ts.url)} target="_blank" rel="noopener noreferrer">Open in Ghutte</a>
-      </p>
-    );
-  }
   return (
-    <>
-      <p className="text-xs text-slate-500">
-        Creates a Ghutte sub-account called “{client.business_name || client.name}” under the agency, using the client&apos;s email, phone and website.
-      </p>
+    <div className="flex items-center gap-2 text-sm">
+      <span className="w-28 shrink-0 text-xs text-slate-400">{name}</span>
+      <span className="min-w-0 flex-1 truncate">{value}</span>
       <button
-        disabled={busy}
+        type="button"
+        className="text-xs underline text-slate-500 hover:text-slate-900 dark:hover:text-white"
         onClick={async () => {
-          setBusy(true);
-          setErr("");
           try {
-            const res = await fetch("/api/ghutte/subaccount", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ taskId: task.id }),
-            });
-            const j = await res.json();
-            if (!res.ok) throw new Error(j.error || "Couldn't create the sub-account.");
-            toast("Ghutte sub-account created");
-            router.refresh();
-          } catch (e) {
-            setErr(e instanceof Error ? e.message : "Couldn't create the sub-account.");
-          } finally {
-            setBusy(false);
+            await navigator.clipboard.writeText(value);
+            toast(`${name} copied`);
+          } catch {
+            toast("Select it and copy it");
           }
         }}
-        className="self-start text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
       >
-        {busy ? "Creating…" : "Create Ghutte sub-account"}
+        Copy
       </button>
+    </div>
+  );
+}
+
+// Mpume creates the sub-account in GHL (the API won't let us), then links it
+// here; the Tracker adds the client as a user and emails their login.
+function GhutteAccount({ task, client, clientTasks }: { task: Task; client: Client; clientTasks: Task[] }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  const [subs, setSubs] = useState<SubAccount[] | null>(null);
+  const [loginUrl, setLoginUrl] = useState("");
+  const [picked, setPicked] = useState("");
+  const [err, setErr] = useState("");
+  const ts = task.tool_state ?? {};
+  const linked = String(ts.location_id ?? client.ghutte_location_id ?? "");
+
+  const ys = (clientTasks.find((t) => t.tool === "yellow")?.tool_state ?? {}) as Record<string, string>;
+  const v = (k: string) => (typeof ys[k] === "string" ? ys[k].trim() : "");
+  const businessName = v("business_name") || client.business_name || client.name;
+
+  useEffect(() => {
+    if (linked) return;
+    let alive = true;
+    listGhutteSubAccounts()
+      .then((r) => {
+        if (!alive) return;
+        setSubs(r.subs);
+        setLoginUrl(r.loginUrl);
+        // Pre-pick a sub-account that looks like this client's, if Mpume already made it.
+        const want = businessName.toLowerCase();
+        const match = r.subs.find((s) => s.name.toLowerCase() === want) ?? r.subs.find((s) => s.email && s.email.toLowerCase() === (client.email ?? "").toLowerCase());
+        if (match) setPicked(match.id);
+      })
+      .catch((e) => alive && setErr(e instanceof Error ? e.message : "Couldn't load the sub-accounts."));
+    return () => {
+      alive = false;
+    };
+  }, [linked, businessName, client.email]);
+
+  if (linked) {
+    return (
+      <div className="flex flex-col gap-1.5 text-sm">
+        <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+          ✓ Sub-account “{String(ts.name ?? businessName)}” linked ·{" "}
+          <a className="underline" href={`https://app.gohighlevel.com/location/${linked}/dashboard`} target="_blank" rel="noopener noreferrer">Open in Ghutte</a>
+        </p>
+        <p className="text-xs text-slate-500">
+          {client.ghutte_login_sent_at
+            ? `${client.name.split(" ")[0]} was added as a user and their login was emailed.`
+            : client.ghutte_error
+            ? client.ghutte_error
+            : "The client is added as a user and emailed their login once Proposal Accepted and Ghutte Payment Made are both ticked."}
+        </p>
+      </div>
+    );
+  }
+
+  const details: [string, string][] = (
+    [
+      ["Business name", businessName],
+      ["Client", [v("first_name"), v("last_name")].filter(Boolean).join(" ") || client.name],
+      ["Email", v("email") || client.email || ""],
+      ["Phone", v("phone") || client.phone || ""],
+      ["Website", v("website") || client.website_url || ""],
+      ["Street address", v("address")],
+      ["City", v("city")],
+      ["Province", v("state")],
+      ["Country", v("country")],
+      ["Postal code", v("postal_code")],
+    ] as [string, string][]
+  ).filter(([, val]) => val);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="text-sm font-semibold">1. Create the sub-account in Ghutte</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Switch to Agency View, create a sub-account with these details and apply the ClubSheIs snapshot.
+          {!v("address") && " The Yellow Sheet isn't in yet, so there's no address: use Johannesburg, Gauteng, 2000 for now."}
+        </p>
+        <div className="mt-2 flex flex-col gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
+          {details.map(([k, val]) => (
+            <CopyRow key={k} label={k} value={val} />
+          ))}
+        </div>
+        <a href={loginUrl || "https://system.ghutte.com"} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">
+          Open Ghutte
+        </a>
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold">2. Link it here</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Pick the sub-account you just made. The Tracker then adds {client.name.split(" ")[0]} as a user and emails their login from Gizelle (once both
+          Sales milestones are ticked).
+        </p>
+        <div className="mt-2 flex gap-2">
+          <select className={field} value={picked} onChange={(e) => setPicked(e.target.value)} aria-label="Sub-account" disabled={!subs}>
+            <option value="">{subs ? "Pick the sub-account…" : "Loading sub-accounts…"}</option>
+            {(subs ?? []).map((sub) => (
+              <option key={sub.id} value={sub.id}>
+                {sub.name}
+                {sub.email ? ` · ${sub.email}` : ""}
+                {sub.dateAdded ? ` · ${new Date(sub.dateAdded).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })}` : ""}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={pending || !picked}
+            onClick={() =>
+              start(async () => {
+                setErr("");
+                try {
+                  const r = await linkGhutteSubAccount(client.id, picked);
+                  toast(r.note);
+                  router.refresh();
+                } catch (e) {
+                  setErr(e instanceof Error ? e.message : "Couldn't link it.");
+                }
+              })
+            }
+            className="shrink-0 text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-md disabled:opacity-50"
+          >
+            {pending ? "Linking…" : "Link"}
+          </button>
+        </div>
+      </div>
       {err && <p className="text-sm text-rose-600">{err}</p>}
-    </>
+    </div>
   );
 }

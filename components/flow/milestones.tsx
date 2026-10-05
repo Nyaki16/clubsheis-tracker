@@ -86,7 +86,7 @@ export default function Milestones({ client, profiles }: { client: Client; profi
         <div className="px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-slate-800 text-xs flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="font-semibold text-slate-600 dark:text-slate-300">Ghutte:</span>
           <span className={client.ghutte_location_id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
-            {client.ghutte_location_id ? "✓ sub-account created" : "○ sub-account"}
+            {client.ghutte_location_id ? "✓ sub-account linked" : both ? "○ sub-account: Mpume creates it (her Onboarding task)" : "○ sub-account"}
           </span>
           <span className={client.ghutte_user_id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
             {client.ghutte_user_id ? "✓ added as a user" : "○ user"}
@@ -100,7 +100,7 @@ export default function Milestones({ client, profiles }: { client: Client; profi
             </a>
           )}
           <span className="ml-auto flex gap-2">
-            {both && (!client.ghutte_location_id || !client.ghutte_user_id) && (
+            {both && client.ghutte_location_id && !client.ghutte_user_id && (
               <button className={btn} disabled={pending} onClick={() => run(() => retryGhutteSetup(client.id))}>
                 <RefreshCw className="w-3 h-3" /> Try again
               </button>

@@ -5,9 +5,10 @@
 //    team's workflow in GHL.
 // 2. Ghutte Payment Made: GHL's payment workflow calls /api/ghl/payment, which
 //    ticks the milestone (the team can also tick it by hand).
-// 3. Once both are done: create the client's sub-account under the agency, add
-//    the client as a user with a temporary password, and email them the login
-//    from Gizelle.
+// 3. Once both are done: Mpume gets the "Create Ghutte sub-account" task (GHL
+//    doesn't let our agency create sub-accounts through the API). She creates
+//    it in GHL and links it in the Tracker, which then adds the client as a
+//    user with a temporary password and emails them the login from Gizelle.
 import { randomInt } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Client, Task } from "./types";
@@ -104,44 +105,74 @@ export async function matchPayingClient(sb: SupabaseClient, p: { contactId?: str
 
 // ── 3. Sub-account, user, login email ────────────────────────────────────────
 
-/** Create the client's sub-account under the agency. Also used by the Ghutte setup task's button. */
-export async function createSubAccount(sb: SupabaseClient, client: Client) {
+/**
+ * Put "Create Ghutte sub-account" on Mpume's list for today, using the task
+ * from the client's package if there is one.
+ */
+async function requestSubAccount(sb: SupabaseClient, client: Client) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: mpume } = await sb.from("profiles").select("id").ilike("name", "mpume%").limit(1).maybeSingle();
+  let { data: flow } = await sb.from("jobs").select("id").eq("client_id", client.id).eq("kind", "flow").maybeSingle();
+  if (!flow) {
+    const { data } = await sb.from("jobs").insert({ client_id: client.id, name: "Client flow", kind: "flow", stage: "briefing" }).select("id").single();
+    flow = data;
+  }
+  if (!flow) throw new Error("Couldn't find the client's flow to add Mpume's task.");
+  const { data: rows } = await sb.from("tasks").select("id, assignee_id, status").eq("job_id", flow.id).eq("tool", "account");
+  const open = ((rows ?? []) as Pick<Task, "id" | "assignee_id" | "status">[]).find((t) => t.status !== "closed_out" && t.status !== "published");
+  if (open) {
+    await sb.from("tasks").update({ due_date: today, assignee_id: open.assignee_id ?? mpume?.id ?? null }).eq("id", open.id);
+    return;
+  }
+  if ((rows ?? []).length) return; // Already done.
+  await sb.from("tasks").insert({
+    job_id: flow.id,
+    phase: "onboarding",
+    position: 0,
+    title: "Create Ghutte sub-account",
+    tool: "account",
+    tool_state: {},
+    status: "planning",
+    assignee_id: mpume?.id ?? client.lead_id ?? null,
+    due_date: today,
+    notes: "",
+  });
+}
+
+export type SubAccount = { id: string; name: string; email: string; city: string; dateAdded: string };
+
+/** Every sub-account under the agency, newest first, for linking one to a client. */
+export async function listSubAccounts(): Promise<SubAccount[]> {
   const key = process.env.GHL_AGENCY_KEY;
   const companyId = process.env.GHL_COMPANY_ID || "SGOwJa0dWkFiHgpbwzY0";
   if (!key) throw new Error("GHL_AGENCY_KEY isn't set on the Tracker.");
-  const ys = await yellowSheet(sb, client.id);
-  const name = ys.business_name || client.business_name || client.name;
-  const country = ys.country;
-  const res = await ghl<{ id?: string }>("/locations/", key, {
-    method: "POST",
-    body: {
-      companyId,
-      name,
-      email: ys.email || client.email || "info@clubsheis.com",
-      phone: ys.phone || client.phone || "",
-      website: ys.website || client.website_url || "",
-      address: ys.address || "",
-      city: ys.city || "Johannesburg",
-      state: ys.state || "Gauteng",
-      country: !country || /south africa|^za$|^rsa$/i.test(country) ? "ZA" : country,
-      postalCode: ys.postal_code || "2000",
-      timezone: "Africa/Johannesburg",
-    },
-  });
-  if (!res.id) throw new Error("Ghutte didn't return a sub-account id.");
-  const locationId = res.id;
-  const url = `https://app.gohighlevel.com/location/${locationId}/dashboard`;
-  await sb.from("clients").update({ ghutte_location_id: locationId }).eq("id", client.id);
+  const out: SubAccount[] = [];
+  for (let skip = 0; skip < 1000; skip += 100) {
+    const res = await ghl<{ locations?: Record<string, string>[] }>(`/locations/search?companyId=${companyId}&limit=100&skip=${skip}`, key, { method: "GET" });
+    const page = res.locations ?? [];
+    out.push(...page.map((l) => ({ id: l.id, name: l.name ?? "", email: l.email ?? "", city: l.city ?? "", dateAdded: l.dateAdded ?? "" })));
+    if (page.length < 100) break;
+  }
+  return out.sort((a, b) => b.dateAdded.localeCompare(a.dateAdded));
+}
 
-  // Tick the "Create Ghutte sub-account" task in their flow.
-  const { data: flow } = await sb.from("jobs").select("id").eq("client_id", client.id).eq("kind", "flow").maybeSingle();
+/**
+ * Mpume has created the sub-account in GHL: record it, close her task, and
+ * carry on with the user and login email if both milestones are done.
+ */
+export async function linkSubAccount(sb: SupabaseClient, clientId: string, locationId: string) {
+  const sub = (await listSubAccounts()).find((l) => l.id === locationId.trim());
+  if (!sub) throw new Error("That sub-account isn't in the agency. Pick it from the list, or check the ID.");
+  const url = `https://app.gohighlevel.com/location/${sub.id}/dashboard`;
+  await sb.from("clients").update({ ghutte_location_id: sub.id, ghutte_error: null }).eq("id", clientId);
+  const { data: flow } = await sb.from("jobs").select("id").eq("client_id", clientId).eq("kind", "flow").maybeSingle();
   if (flow) {
     const { data: rows } = await sb.from("tasks").select("id, tool_state").eq("job_id", flow.id).eq("tool", "account");
     for (const t of (rows ?? []) as Pick<Task, "id" | "tool_state">[]) {
-      await sb.from("tasks").update({ status: "closed_out", tool_state: { ...(t.tool_state ?? {}), state: "done", location_id: locationId, url, name } }).eq("id", t.id);
+      await sb.from("tasks").update({ status: "closed_out", tool_state: { ...(t.tool_state ?? {}), state: "done", location_id: sub.id, url, name: sub.name } }).eq("id", t.id);
     }
   }
-  return { locationId, url, name };
+  return runGhutteSetup(sb, clientId);
 }
 
 // Temporary password: 14 characters with upper, lower, digit and symbol.
@@ -236,8 +267,12 @@ export async function runGhutteSetup(sb: SupabaseClient, clientId: string): Prom
   if (!client) return "Client not found.";
   if (!client.proposal_accepted_at || !client.ghutte_paid_at) return "Waiting for both milestones.";
   try {
-    let locationId = client.ghutte_location_id;
-    if (!locationId) locationId = (await createSubAccount(sb, client)).locationId;
+    const locationId = client.ghutte_location_id;
+    if (!locationId) {
+      await requestSubAccount(sb, client);
+      await sb.from("clients").update({ ghutte_error: null }).eq("id", clientId);
+      return "Mpume has the “Create Ghutte sub-account” task for today. Once she links it, the login goes out.";
+    }
     if (!client.ghutte_user_id) await addClientUser(sb, client, locationId);
     await sb.from("clients").update({ ghutte_error: null }).eq("id", clientId);
     return "Ghutte is set up and the login has been emailed.";

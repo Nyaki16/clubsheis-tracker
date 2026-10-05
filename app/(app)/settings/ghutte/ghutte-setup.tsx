@@ -44,8 +44,9 @@ export default function GhutteSetup({
         <h1 className="text-2xl font-bold">Ghutte</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           The two Sales milestones on every client. <b>Proposal Accepted</b> tags the client in ClubSheIs&apos;s GHL so your workflow runs.{" "}
-          <b>Ghutte Payment Made</b> ticks itself when GHL reports the payment. Once both are ticked, the Tracker creates their Ghutte sub-account, adds them
-          as a user and emails their login from Gizelle.
+          <b>Ghutte Payment Made</b> ticks itself when GHL reports the payment. Once both are ticked, Mpume gets the “Create Ghutte sub-account” task with
+          the client&apos;s details. She creates it in Ghutte and links it in the task, and the Tracker adds the client as a user and emails their login from
+          Gizelle.
         </p>
       </header>
 
@@ -53,7 +54,7 @@ export default function GhutteSetup({
         <h2 className="font-semibold">Connections</h2>
         <ul className="flex flex-col gap-2">
           <Status ok={env.clubsheisKey} label="ClubSheIs GHL key (for the tag)" fix="Add GHL_PIT_KEY_CLUBSHEIS on Vercel (the same key the old Client Flow app uses), then redeploy." />
-          <Status ok={env.agencyKey} label="Agency key (sub-accounts and users)" fix="Add GHL_AGENCY_KEY on Vercel. It needs the locations and users write permissions." />
+          <Status ok={env.agencyKey} label="Agency key (listing sub-accounts, adding users)" fix="Add GHL_AGENCY_KEY on Vercel. In GHL's Private Integrations it needs Sub-accounts (view) and Users (view and edit)." />
           <Status ok={env.gmail} label="Gmail (the login email)" fix="Add GMAIL_USER and GMAIL_APP_PASSWORD on Vercel." />
         </ul>
       </section>
