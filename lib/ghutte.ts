@@ -60,7 +60,7 @@ export async function tagProposalAccepted(sb: SupabaseClient, client: Client) {
   if (!client.email && !client.phone) throw new Error(`Add ${client.name}'s email or phone first, so GHL can find their contact.`);
   const { tag } = await ghutteSettings(sb);
   const { firstName, lastName } = splitName(client.name);
-  const res = await ghl<{ contact?: { id: string } }>("/contacts/upsert", key, {
+  const res = await ghl<{ contact?: { id: string; tags?: string[] } }>("/contacts/upsert", key, {
     method: "POST",
     body: {
       locationId: CLUBSHEIS_LOCATION,
@@ -75,7 +75,9 @@ export async function tagProposalAccepted(sb: SupabaseClient, client: Client) {
   });
   const contactId = res.contact?.id;
   if (!contactId) throw new Error("GHL didn't return the contact.");
-  await ghl(`/contacts/${contactId}/tags`, key, { method: "POST", body: { tags: [tag] } });
+  // Tagging again doesn't help and could start the workflow twice.
+  const has = (res.contact?.tags ?? []).some((t) => t.toLowerCase() === tag.toLowerCase());
+  if (!has) await ghl(`/contacts/${contactId}/tags`, key, { method: "POST", body: { tags: [tag] } });
   await sb.from("clients").update({ ghl_contact_id: contactId }).eq("id", client.id);
   return { contactId, tag };
 }

@@ -26,13 +26,16 @@ const done = (clientId: string) => {
  */
 export async function setProposalAccepted(clientId: string, accepted: boolean) {
   const { supabase, userId } = await me();
-  const { data, error } = await supabase
+  // Only the click that actually ticks it carries on to GHL, so a double click
+  // (or two people at once) can't start the workflow twice.
+  let query = supabase
     .from("clients")
     .update(accepted ? { proposal_accepted_at: new Date().toISOString(), proposal_accepted_by: userId } : { proposal_accepted_at: null, proposal_accepted_by: null })
-    .eq("id", clientId)
-    .select("*")
-    .single();
+    .eq("id", clientId);
+  if (accepted) query = query.is("proposal_accepted_at", null);
+  const { data, error } = await query.select("*").maybeSingle();
   if (error) throw new Error(error.message);
+  if (accepted && !data) return { note: "Already ticked." };
   if (!accepted) {
     done(clientId);
     return { note: "Proposal Accepted unticked. (The tag stays on their GHL contact.)" };
