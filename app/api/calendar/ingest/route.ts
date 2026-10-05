@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingFrom, type Booking, type IncomingEvent } from "@/lib/calendar";
 import { CLIENT_COLORS } from "@/lib/constants";
 import { PHASES, type FlowTemplate } from "@/lib/flow";
+import { normName, phoneKey } from "@/lib/duplicates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,8 +67,27 @@ export async function POST(req: Request) {
   const sb = createAdminClient();
   const ignore = new Set((process.env.CALENDAR_IGNORE_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
   const leadId = await defaultLeadId(sb);
-  const { count } = await sb.from("clients").select("*", { count: "exact", head: true });
-  let colour = count ?? 0;
+  // Everyone already in the Tracker, kept in step as this batch changes things.
+  const { data: allRows } = await sb.from("clients").select("*");
+  const all = (allRows ?? []) as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let colour = all.length;
+  // Match on the calendar event, then email, then phone, then an exact name
+  // (only when exactly one client has it, so namesakes aren't merged).
+  const findExisting = (b: Booking) => {
+    const byEvent = all.find((c) => c.call_event_id === b.eventId);
+    if (byEvent) return byEvent;
+    if (b.email) {
+      const byEmail = all.find((c) => c.email && String(c.email).toLowerCase() === b.email);
+      if (byEmail) return byEmail;
+    }
+    const pk = phoneKey(b.phone);
+    if (pk) {
+      const byPhone = all.find((c) => phoneKey(c.phone) === pk);
+      if (byPhone) return byPhone;
+    }
+    const named = all.filter((c) => normName(c.name) === normName(b.name));
+    return named.length === 1 ? named[0] : null;
+  };
   const result = { leads: 0, past: 0, updated: 0, cancelled: 0, notes: 0, skipped: 0 };
 
   // Oldest first, so a person who booked more than once ends up with their latest call.
@@ -81,10 +101,7 @@ export async function POST(req: Request) {
       result.skipped++;
       continue;
     }
-    const { data: byEvent } = await sb.from("clients").select("*").eq("call_event_id", b.eventId).maybeSingle();
-    const existing =
-      byEvent ??
-      (b.email ? (await sb.from("clients").select("*").ilike("email", b.email).limit(1).maybeSingle()).data : null);
+    const existing = findExisting(b);
 
     if (b.cancelled) {
       if (existing && existing.call_event_id === b.eventId && !existing.call_cancelled) {
@@ -113,7 +130,10 @@ export async function POST(req: Request) {
       // A past lead who books again comes back into Sales.
       const revive = existing.is_past_lead && new Date(b.start) >= LEADS_FROM;
       if (revive) patch.is_past_lead = false;
-      if (Object.keys(patch).length) await sb.from("clients").update(patch).eq("id", existing.id);
+      if (Object.keys(patch).length) {
+        await sb.from("clients").update(patch).eq("id", existing.id);
+        Object.assign(existing, patch);
+      }
 
       if (revive) {
         const { data: job } = await sb.from("jobs").select("id").eq("client_id", existing.id).eq("kind", "flow").maybeSingle();
@@ -161,12 +181,13 @@ export async function POST(req: Request) {
         call_notes_url: b.notesUrl,
         call_notes: b.notesText,
       })
-      .select("id")
+      .select("*")
       .single();
     if (error) {
       result.skipped++;
       continue;
     }
+    all.push(client);
     if (isLead) {
       await issueLeadTasks(sb, client.id, b, leadId);
       result.leads++;

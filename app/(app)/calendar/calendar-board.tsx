@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Repeat } from "lucide-react";
 import type { Client, ClientDate } from "@/lib/types";
 import { expandDates, formatTime } from "@/lib/recurrence";
@@ -30,35 +30,11 @@ export default function CalendarBoard({
   const [cursor, setCursor] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  // Selected client IDs; empty Set means "show all".
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("calendar.pickedClients");
-      if (raw) setPicked(new Set(JSON.parse(raw)));
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "calendar.pickedClients",
-        JSON.stringify(Array.from(picked))
-      );
-    } catch {}
-  }, [picked]);
-
   const clientById = useMemo(() => {
     const m = new Map<string, Client>();
     clients.forEach((c) => m.set(c.id, c));
     return m;
   }, [clients]);
-
-  const visibleDates = useMemo(() => {
-    if (picked.size === 0) return dates;
-    return dates.filter((d) => picked.has(d.client_id));
-  }, [dates, picked]);
 
   // Build a 6-week grid covering the visible month.
   const grid = useMemo(() => {
@@ -79,7 +55,7 @@ export default function CalendarBoard({
     if (grid.length === 0) return new Map<string, ClientDate[]>();
     const start = grid[0];
     const end = grid[grid.length - 1];
-    const instances = expandDates(visibleDates, start, end);
+    const instances = expandDates(dates, start, end);
     const map = new Map<string, ClientDate[]>();
     instances.forEach((i) => {
       if (!map.has(i.date)) map.set(i.date, []);
@@ -95,16 +71,7 @@ export default function CalendarBoard({
       })
     );
     return map;
-  }, [visibleDates, grid]);
-
-  function togglePicked(id: string) {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  }, [dates, grid]);
 
   const todayYmd = ymd(today);
 
@@ -145,45 +112,6 @@ export default function CalendarBoard({
           <div className="text-lg font-semibold ml-3">
             {MONTH_NAMES[cursor.getMonth()]} {cursor.getFullYear()}
           </div>
-        </div>
-      </div>
-
-      {/* Client filter chips */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-3 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 font-medium">
-            Clients
-          </span>
-          {picked.size > 0 && (
-            <button
-              onClick={() => setPicked(new Set())}
-              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-            >
-              Show all
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {clients.map((c) => {
-            const active = picked.size === 0 || picked.has(c.id);
-            return (
-              <button
-                key={c.id}
-                onClick={() => togglePicked(c.id)}
-                className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition ${
-                  active
-                    ? "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500"
-                }`}
-              >
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: c.color }}
-                />
-                {c.name}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -274,7 +202,7 @@ export default function CalendarBoard({
         </div>
       </div>
 
-      {visibleDates.length === 0 && (
+      {dates.length === 0 && (
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 text-center">
           {dates.length === 0
             ? "No client dates yet. Add some from any client profile."
