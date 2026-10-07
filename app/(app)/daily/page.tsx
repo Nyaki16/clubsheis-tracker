@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { withoutArchived } from "@/lib/archived";
 import DailyClient from "./daily-client";
 
 export default async function DailyPage() {
@@ -10,11 +11,14 @@ export default async function DailyPage() {
     supabase.from("profiles").select("*").order("name"),
   ]);
 
+  // Archived clients (Past leads) and their tasks stay off the Daily Scroll.
+  const clients = (clientsRes.data ?? []).filter((c) => !c.is_past_lead);
+  const jobs = jobsRes.data ?? [];
   return (
     <DailyClient
-      tasks={tasksRes.data ?? []}
-      clients={clientsRes.data ?? []}
-      jobs={jobsRes.data ?? []}
+      tasks={withoutArchived(tasksRes.data ?? [], jobs, clientsRes.data ?? [])}
+      clients={clients}
+      jobs={jobs}
       profiles={profilesRes.data ?? []}
     />
   );

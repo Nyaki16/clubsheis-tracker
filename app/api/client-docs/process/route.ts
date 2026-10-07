@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DOC_TITLES, processDirtyClients, type DocKind } from "@/lib/client-docs";
 import { processTeamScrolls } from "@/lib/debbie";
+import { maybeWriteWeeklyBriefing } from "@/lib/briefing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
   after(async () => {
     await processTeamScrolls(sb, 1);
     await processDirtyClients(sb, 2);
+    await maybeWriteWeeklyBriefing(sb).catch(() => {});
   });
   return Response.json({ writes });
 }

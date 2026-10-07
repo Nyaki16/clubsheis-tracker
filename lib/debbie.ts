@@ -305,10 +305,15 @@ export async function runTool(sb: SupabaseClient, name: string, input: Row, ctx:
         q = q.in("job_id", (jobs ?? []).map((j) => j.id));
       }
       const { data } = await q;
-      const rows = (data ?? []) as Task[];
+      let rows = (data ?? []) as Task[];
       if (!rows.length) return "No tasks match.";
-      const { data: jobs } = await sb.from("jobs").select("id, name, kind, clients(name)").in("id", [...new Set(rows.map((r) => r.job_id))]);
-      const jobInfo = new Map(((jobs ?? []) as unknown as { id: string; name: string; kind: string; clients: { name: string } | null }[]).map((j) => [j.id, j]));
+      const { data: jobs } = await sb.from("jobs").select("id, name, kind, clients(name, is_past_lead)").in("id", [...new Set(rows.map((r) => r.job_id))]);
+      const jobInfo = new Map(
+        ((jobs ?? []) as unknown as { id: string; name: string; kind: string; clients: { name: string; is_past_lead: boolean } | null }[]).map((j) => [j.id, j])
+      );
+      // Archived clients' (Past leads') tasks only show when asking about that client.
+      if (!s("client")) rows = rows.filter((t) => !jobInfo.get(t.job_id)?.clients?.is_past_lead);
+      if (!rows.length) return "No tasks match (archived clients' tasks are left out).";
       return rows
         .map((t) => {
           const j = jobInfo.get(t.job_id);

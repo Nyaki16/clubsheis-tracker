@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Client, Job, Profile, Task } from "@/lib/types";
+import { withoutArchived } from "@/lib/archived";
 import PipelineBoard from "./pipeline-board";
 
 export default async function PipelinePage() {
@@ -13,7 +14,7 @@ export default async function PipelinePage() {
 
   return (
     <PipelineBoard
-      tasks={(tasksRes.data ?? []) as Task[]}
+      tasks={withoutArchived((tasksRes.data ?? []) as Task[], (jobsRes.data ?? []) as Job[], (clientsRes.data ?? []) as Client[])}
       jobs={(jobsRes.data ?? []) as Job[]}
       clients={(clientsRes.data ?? []) as Client[]}
       profiles={(profilesRes.data ?? []) as Profile[]}

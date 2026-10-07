@@ -4,6 +4,7 @@ import type { Client, Job, Profile, Task } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import Avatar from "@/components/avatar";
 import InviteButton from "./invite-button";
+import { withoutArchived } from "@/lib/archived";
 
 export default async function TeamPage() {
   const supabase = await createClient();
@@ -18,9 +19,9 @@ export default async function TeamPage() {
   ]);
 
   const profiles: Profile[] = profilesRes.data ?? [];
-  const tasks: Task[] = tasksRes.data ?? [];
   const jobs: Job[] = jobsRes.data ?? [];
   const clients: Client[] = clientsRes.data ?? [];
+  const tasks: Task[] = withoutArchived(tasksRes.data ?? [], jobs, clients);
   const me = profiles.find((p) => p.id === user?.id);
   const isAdmin = !!me?.is_admin;
 
